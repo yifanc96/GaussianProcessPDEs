@@ -35,12 +35,14 @@ end
 
 """
 ExKIObj Constructor 
-parameter_names::Array{String,1} : parameter name vector
-θ0_mean::Array{FT} : prior mean
-θθ0_cov::Array{FT, 2} : prior covariance
-g_t::Array{FT,1} : observation 
-obs_cov::Array{FT, 2} : observation covariance
-α_reg::FT : regularization parameter toward θ0 (0 < α_reg <= 1), default should be 1, without regulariazion
+N_iter: number of iterations
+y::Array{FT,1} : observation
+Σ_η::Array{FT, 2} : observation error covariance
+γ::FT : hyperparameter
+r_0::Array{FT, 1} : prior mean 
+Σ_0::Array{FT, 2} : prior covariance
+θ0_mean::Array{FT, 1} : initial mean
+θθ0_cov::Array{FT, 2} : initial covariance
 """
 function ExKIObj(N_iter::IT,
                  y::Array{FT,1},
@@ -79,10 +81,7 @@ end
 
 """
 update exki struct
-ens_func: The function g = G(θ)
-define the function as 
-    ens_func(θ_ens) = MyG(phys_params, θ_ens, other_params)
-use G(θ_mean) instead of FG(θ)
+forward(θ) = G(θ) dG(θ)
 """
 function update_ensemble!(exki::ExKIObj{FT, IT}, forward::Function) where {FT<:AbstractFloat, IT<:Int}
     
