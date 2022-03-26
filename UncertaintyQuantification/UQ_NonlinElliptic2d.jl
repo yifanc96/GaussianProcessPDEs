@@ -1,5 +1,5 @@
 include("../CovarianceFunctions/CovarianceFunctions.jl")
-
+include("ExtendKalmanFilter.jl")
 # For linear algebra
 using LinearAlgebra
 # logging
@@ -171,7 +171,7 @@ N_boundary = size(X_boundary,2)
 
 
 Σ0_init = get_Σ0_init(eqn, cov_u, X_domain, X_boundary)
-Σ_η = get_Σ_η(eqn, cov_rhs, cov_bdy, X_domain, X_boundary)
+Σ_η_init = get_Σ_η(eqn, cov_rhs, cov_bdy, X_domain, X_boundary)
 z_init = zeros(2*N_domain+N_boundary) # initial solution
 rhs = [eqn.rhs(X_domain[:,i]) for i in 1:N_domain]
 bdy = [eqn.bdy(X_boundary[:,i]) for i in 1:N_boundary]
@@ -181,3 +181,50 @@ bdy = [eqn.bdy(X_boundary[:,i]) for i in 1:N_boundary]
 
 
 
+N_iter = 30
+N_θ = 2*N_domain+N_boundary
+
+r_0, Σ_0 = zeros(Float64, N_θ), Σ0_init
+θ0_mean, θθ0_cov = r_0, Σ_0
+
+
+N_y = N_boundary+N_domain
+y, Σ_η = zeros(Float64, N_y), Σ_η_init
+
+struct Setup_Param{IT<:Int, FT<:AbstractFloat}
+    N_boundary::IT,
+    N_domain::IT,
+    α::FT,
+    m::IT,
+    rhs::Array{FT,1},
+    bdy::Array{FT,1},
+    N_θ::IT
+    N_y::IT
+end
+
+
+
+function forward(s_param, θ)
+    N_boundary,N_domain,α,m,rhs,bdy = s_param.N_boundary, s_param.N_domain, s_param.α, s_param.m, s_param.rhs, s_param.bdy
+    G = get_G(θ,N_boundary,N_domain,α,m,rhs,bdy)
+    dG = get_dG(θ,N_boundary,N_domain,α,m)
+    return G, dG
+end
+
+s_param = Setup_Param(N_boundary, N_domain, α, m, rhs, bdy, N_θ, N_y)
+
+method = "ExKI"
+# UKI-1
+exki_obj = ExKI_Run(s_param, forward, 
+method,
+y, Σ_η,
+r_0,
+Σ_0,
+θ0_mean, θθ0_cov,
+N_iter,)
+
+@info "ERRORs are :" , norm(exki_obj.θ_mean[end] - θ_post), norm(exki_obj.θθ_cov[end] - Σ_post)
+    
+    
+    
+ 

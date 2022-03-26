@@ -8,6 +8,7 @@ For solving the inverse problem
 """
 
 mutable struct ExKIObj{FT<:AbstractFloat, IT<:Int}
+     method::String
     "a vector of arrays of size  N_parameters containing the mean of the parameters (in each exki iteration a new array of mean is added)"
      θ_mean::Vector{Array{FT, 1}}
      "a vector of arrays of size (N_parameters x N_parameters) containing the covariance of the parameters (in each exki iteration a new array of cov is added)"
@@ -30,6 +31,7 @@ mutable struct ExKIObj{FT<:AbstractFloat, IT<:Int}
      γ::FT
      "current iteration number"
      iter::IT
+     N_iter::IT
 end
 
 
@@ -45,7 +47,8 @@ r_0::Array{FT, 1} : prior mean
 θ0_mean::Array{FT, 1} : initial mean
 θθ0_cov::Array{FT, 2} : initial covariance
 """
-function ExKIObj(N_iter::IT,
+function ExKIObj(method::String, 
+                 N_iter::IT,
                  y::Array{FT,1},
                  Σ_η::Array{FT, 2},
                  γ::FT,
@@ -69,11 +72,12 @@ function ExKIObj(N_iter::IT,
 
     iter = IT(0)
 
-    ExKIObj{FT,IT}(θ_mean, θθ_cov, y_pred, 
+    ExKIObj{FT,IT}(method, 
+                  θ_mean, θθ_cov, y_pred, 
                   y,   Σ_η, 
                   N_θ, N_y, 
                   r_0, Σ_0, 
-                  γ, iter)
+                  γ, iter, N_iter)
 
 end
 
@@ -96,24 +100,45 @@ function update_ensemble!(exki::ExKIObj{FT, IT}, forward::Function) where {FT<:A
     N_θ, N_y = exki.N_θ, exki.N_y
     ############# Prediction step:
 
-    θ_p_mean  = θ_mean
-    θθ_p_cov =  (γ + 1)*θθ_cov
-    
+    if exki.method == "ExKI"
+        θ_p_mean  = θ_mean
+        θθ_p_cov =  (γ + 1)*θθ_cov
+        
 
-    g_mean, dg = forward(θ_p_mean)
-    θg_cov = θθ_p_cov * dg'
+        g_mean, dg = forward(θ_p_mean)
+        θg_cov = θθ_p_cov * dg'
 
-    # extended system
-    ff_cov = [ dg*θg_cov+(1 + 1/γ)*Σ_η  θg_cov';
-                θg_cov     θθ_p_cov+(1 + 1/γ)*Σ_0] 
+        # extended system
+        ff_cov = [ dg*θg_cov+(1 + 1/γ)*Σ_η  θg_cov';
+                    θg_cov     θθ_p_cov+(1 + 1/γ)*Σ_0] 
 
-    θf_cov = [θg_cov   θθ_p_cov]
+        θf_cov = [θg_cov   θθ_p_cov]
 
-    tmp = θf_cov/ff_cov
+        tmp = θf_cov/ff_cov
 
-    θ_mean =  θ_p_mean + tmp*([y ; r_0] - [g_mean; θ_p_mean])
+        θ_mean =  θ_p_mean + tmp*([y ; r_0] - [g_mean; θ_p_mean])
 
-    θθ_cov =  θθ_p_cov - tmp*θf_cov' 
+        θθ_cov =  θθ_p_cov - tmp*θf_cov' 
+    elseif exki.method == "ExKF"
+        Δt = 1.0/exki.N_iter
+        θ_p_mean  = θ_mean
+        θθ_p_cov =   θθ_cov
+        
+
+        g_mean, dg = forward(θ_p_mean)
+        θg_cov = θθ_p_cov * dg'
+
+        # extended system
+        gg_cov = dg*θg_cov + Σ_η/Δt
+
+
+        tmp = θg_cov/gg_cov
+
+        θ_mean =  θ_p_mean + tmp*(y - g_mean)
+
+        θθ_cov =  θθ_p_cov - tmp*θg_cov' 
+    end
+
 
 
     ########### Save resutls
@@ -125,6 +150,7 @@ end
 
 
 function ExKI_Run(s_param, forward::Function, 
+    method, 
     y, Σ_η,
     r_0,
     Σ_0,
@@ -133,6 +159,7 @@ function ExKI_Run(s_param, forward::Function,
     γ = 1.0)
 
     exkiobj = ExKIObj(
+        method,
         N_iter,
         y,
         Σ_η,
@@ -235,89 +262,91 @@ end
 
 ##################
 
-function Two_Param_Linear_Test(problem_type::String, θ0_bar, θθ0_cov)
+# function Two_Param_Linear_Test(problem_type::String, θ0_bar, θθ0_cov)
     
-    N_θ = length(θ0_bar)
+#     N_θ = length(θ0_bar)
 
     
-    if problem_type == "under-determined"
-        # under-determined case
-        θ_ref = [0.6, 1.2]
-        G = [1.0 2.0;]
+#     if problem_type == "under-determined"
+#         # under-determined case
+#         θ_ref = [0.6, 1.2]
+#         G = [1.0 2.0;]
         
-        y = [3.0;]
-        Σ_η = Array(Diagonal(fill(0.1^2, size(y))))
-        
-        
-    
-    elseif problem_type == "over-determined"
-        # over-determined case
-        θ_ref = [1/3, 8.5/6]
-        G = [1.0 2.0; 3.0 4.0; 5.0 6.0]
-        
-        y = [3.0;7.0;10.0]
-        Σ_η = Array(Diagonal(fill(0.1^2, size(y))))
-        
-    elseif problem_type == "Hilbert"
-
-        G = zeros(N_θ, N_θ)
-        for i = 1:N_θ
-            for j = 1:N_θ
-                G[i,j] = 1/(i + j - 1)
-            end
-        end
-    
-        θ_ref = fill(1.0, N_θ)
-        y   = G*θ_ref 
-        Σ_η = Array(Diagonal(fill(0.5^2, N_θ)))
+#         y = [3.0;]
+#         Σ_η = Array(Diagonal(fill(0.1^2, size(y))))
         
         
-    else
-        error("Problem type : ", problem_type, " has not implemented!")
-    end
     
-    Σ_post = inv(G'*(Σ_η\G) + inv(θθ0_cov))
-    θ_post = θ0_bar + Σ_post*(G'*(Σ_η\(y - G*θ0_bar)))
+#     elseif problem_type == "over-determined"
+#         # over-determined case
+#         θ_ref = [1/3, 8.5/6]
+#         G = [1.0 2.0; 3.0 4.0; 5.0 6.0]
+        
+#         y = [3.0;7.0;10.0]
+#         Σ_η = Array(Diagonal(fill(0.1^2, size(y))))
+        
+#     elseif problem_type == "Hilbert"
+
+#         G = zeros(N_θ, N_θ)
+#         for i = 1:N_θ
+#             for j = 1:N_θ
+#                 G[i,j] = 1/(i + j - 1)
+#             end
+#         end
+    
+#         θ_ref = fill(1.0, N_θ)
+#         y   = G*θ_ref 
+#         Σ_η = Array(Diagonal(fill(0.5^2, N_θ)))
+        
+        
+#     else
+#         error("Problem type : ", problem_type, " has not implemented!")
+#     end
+    
+#     Σ_post = inv(G'*(Σ_η\G) + inv(θθ0_cov))
+#     θ_post = θ0_bar + Σ_post*(G'*(Σ_η\(y - G*θ0_bar)))
     
 
-    return θ_post, Σ_post, G, y, Σ_η
-end
+#     return θ_post, Σ_post, G, y, Σ_η
+# end
 
 
-struct Setup_Param{MAT, IT<:Int}
-    G::MAT
-    N_θ::IT
-    N_y::IT
-end
+# struct Setup_Param{MAT, IT<:Int}
+#     G::MAT
+#     N_θ::IT
+#     N_y::IT
+# end
 
-function forward(s_param::Setup_Param, θ::Array{FT, 1}) where {FT<:AbstractFloat}
-    G = s_param.G 
-    return G * θ, G
-end
+# function forward(s_param::Setup_Param, θ::Array{FT, 1}) where {FT<:AbstractFloat}
+#     G = s_param.G 
+#     return G * θ, G
+# end
 
-N_iter = 30
-N_θ = 2
+# N_iter = 30
+# N_θ = 2
 
-r_0, Σ_0 = zeros(Float64, N_θ), Array(Diagonal(fill(1.0^2, N_θ)))
-θ0_mean, θθ0_cov = r_0, Σ_0
+# r_0, Σ_0 = zeros(Float64, N_θ), Array(Diagonal(fill(1.0^2, N_θ)))
+# θ0_mean, θθ0_cov = r_0, Σ_0
 
-problem_type = "under-determined"
+# problem_type = "under-determined"
     
-θ_post, Σ_post, G, y, Σ_η = Two_Param_Linear_Test(problem_type, r_0, Σ_0)
+# θ_post, Σ_post, G, y, Σ_η = Two_Param_Linear_Test(problem_type, r_0, Σ_0)
 
-N_y = length(y)
+# N_y = length(y)
 
-s_param = Setup_Param(G, N_θ, N_y)
+# s_param = Setup_Param(G, N_θ, N_y)
 
-# UKI-1
-exki_obj = ExKI_Run(s_param, forward, 
-y, Σ_η,
-r_0,
-Σ_0,
-θ0_mean, θθ0_cov,
-N_iter,)
+# method = "ExKI"
+# # UKI-1
+# exki_obj = ExKI_Run(s_param, forward, 
+# method,
+# y, Σ_η,
+# r_0,
+# Σ_0,
+# θ0_mean, θθ0_cov,
+# N_iter,)
 
-@info "ERRORs are :" , norm(exki_obj.θ_mean[end] - θ_post), norm(exki_obj.θθ_cov[end] - Σ_post)
+# @info "ERRORs are :" , norm(exki_obj.θ_mean[end] - θ_post), norm(exki_obj.θθ_cov[end] - Σ_post)
     
     
     
