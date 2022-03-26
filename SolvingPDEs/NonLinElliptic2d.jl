@@ -111,8 +111,8 @@ m = 3
 h_in = 0.02
 h_bd = 0.02
 lengthscale = 0.3
-kernel = "Matern9half"
-cov = MaternCovariance9_2(lengthscale)
+kernel = "Matern7half"
+cov = MaternCovariance7_2(lengthscale)
 nugget = 1e-10
 GNsteps = 2
 
