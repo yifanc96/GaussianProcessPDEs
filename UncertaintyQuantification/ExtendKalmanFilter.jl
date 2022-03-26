@@ -129,11 +129,13 @@ function update_ensemble!(exki::ExKIObj{FT, IT}, forward::Function) where {FT<:A
         θg_cov = θθ_p_cov * dg'
 
         # extended system
+        
         gg_cov = dg*θg_cov + Σ_η/Δt
 
-
+        @show size(θg_cov), size(gg_cov)
         tmp = θg_cov/gg_cov
-
+        @info size(y), size(g_mean)
+        @show size(θ_p_mean), size(tmp), size(y - g_mean)
         θ_mean =  θ_p_mean + tmp*(y - g_mean)
 
         θθ_cov =  θθ_p_cov - tmp*θg_cov' 

@@ -87,6 +87,7 @@ function get_G(z,N_boundary,N_domain,α,m,rhs,bdy)
     y = zeros(N_boundary+N_domain)
     y[1:N_boundary] = z[1:N_boundary]-bdy
     y[N_boundary+1:end] = z[N_boundary+N_domain+1:end] + α*z[N_boundary+1:N_boundary+N_domain].^m-rhs
+    return y
 end
 
 # get dG
@@ -97,7 +98,7 @@ end
 function get_Σ_η(eqn::NonlinElliptic2d, cov_rhs::AbstractCovarianceFunction, cov_bdy::AbstractCovarianceFunction, X_domain, X_boundary)
     d = 2
     N_domain = size(X_domain,2)
-    N_domain = size(X_boundary,2)
+    N_boundary = size(X_boundary,2)
     meas_bdδ = [PointMeasurement{d}(SVector{d,Float64}(X_boundary[:,i])) for i = 1:N_boundary]
     meas_intδ = [PointMeasurement{d}(SVector{d,Float64}(X_domain[:,i])) for i = 1:N_domain]
 
@@ -107,7 +108,8 @@ function get_Σ_η(eqn::NonlinElliptic2d, cov_rhs::AbstractCovarianceFunction, c
     cov_rhs(Σ_η_rhs, meas_intδ)
     cov_bdy(Σ_η_bd, meas_bdδ)
     
-    Σ_η = zeros(N_boundary+N_domain)
+    Σ_η = zeros(N_boundary+N_domain, N_boundary+N_domain)
+    @show size(Σ_η), N_boundary, N_domain
     Σ_η[1:N_boundary,1:N_boundary] = Σ_η_bd
     Σ_η[N_boundary+1:end,N_boundary+1:end] = Σ_η_rhs
     return Σ_η
@@ -192,12 +194,12 @@ N_y = N_boundary+N_domain
 y, Σ_η = zeros(Float64, N_y), Σ_η_init
 
 struct Setup_Param{IT<:Int, FT<:AbstractFloat}
-    N_boundary::IT,
-    N_domain::IT,
-    α::FT,
-    m::IT,
-    rhs::Array{FT,1},
-    bdy::Array{FT,1},
+    N_boundary::IT
+    N_domain::IT
+    α::FT
+    m::IT
+    rhs::Array{FT,1}
+    bdy::Array{FT,1}
     N_θ::IT
     N_y::IT
 end
@@ -213,7 +215,7 @@ end
 
 s_param = Setup_Param(N_boundary, N_domain, α, m, rhs, bdy, N_θ, N_y)
 
-method = "ExKI"
+method = "ExKF"
 # UKI-1
 exki_obj = ExKI_Run(s_param, forward, 
 method,
