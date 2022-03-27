@@ -4,7 +4,7 @@ include("../CovarianceFunctions/CovarianceFunctions.jl")
 using LinearAlgebra
 # logging
 using Logging
-
+using PyPlot
 ## PDEs type
 abstract type AbstractPDEs end
 struct NonlinElliptic2d{Tα,Tm,TΩ} <: AbstractPDEs
@@ -105,7 +105,7 @@ function iterGPR_exact(eqn, cov, X_domain, X_boundary, sol_init, nugget, GNsteps
 end 
 
 
-α = 1.0
+α = 100.0
 m = 3
 Ω = [[0,1] [0,1]]
 h_in = 0.02
@@ -114,7 +114,7 @@ lengthscale = 0.3
 kernel = "Matern7half"
 cov = MaternCovariance7_2(lengthscale)
 nugget = 1e-10
-GNsteps = 2
+GNsteps = 10
 
 # ground truth solution
 freq = 600
@@ -161,6 +161,10 @@ pts_accuracy_exact = sqrt(sum((truth-sol_exact).^2)/N_domain)
 @info "[L2 accuracy: exact method] $pts_accuracy_exact"
 pts_max_accuracy_exact = maximum(abs.(truth-sol_exact))
 @info "[Linf accuracy: exact method] $pts_max_accuracy_exact"
+
+figure()
+plot(truth)
+plot(sol_exact)
 
 
 

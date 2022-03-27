@@ -4,6 +4,7 @@ include("ExtendKalmanFilter.jl")
 using LinearAlgebra
 # logging
 using Logging
+using PyPlot
 
 ## PDEs type
 abstract type AbstractPDEs end
@@ -118,7 +119,7 @@ end
 
 
 
-α = 1.0
+α = 100.0
 m = 3
 Ω = [[0,1] [0,1]]
 h_in = 0.02
@@ -178,12 +179,12 @@ z_init = zeros(2*N_domain+N_boundary) # initial solution
 rhs = [eqn.rhs(X_domain[:,i]) for i in 1:N_domain]
 bdy = [eqn.bdy(X_boundary[:,i]) for i in 1:N_boundary]
 
-# truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
+truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
 
 
 
 
-N_iter = 30
+N_iter = 10
 N_θ = 2*N_domain+N_boundary
 
 r_0, Σ_0 = zeros(Float64, N_θ), Σ0_init
@@ -191,7 +192,10 @@ r_0, Σ_0 = zeros(Float64, N_θ), Σ0_init
 
 
 N_y = N_boundary+N_domain
-y, Σ_η = zeros(Float64, N_y), Σ_η_init
+Σ_η = zeros(N_boundary+N_domain, N_boundary+N_domain)
+Σ_η[1:N_boundary,1:N_boundary] = 1e-6*diagm(diag(Σ_0[1:N_boundary,1:N_boundary]))
+Σ_η[N_boundary+1:end,N_boundary+1:end] = 1e-6*diagm(diag(Σ_0[N_boundary+N_domain+1:end,N_boundary+N_domain+1:end]))
+y = zeros(Float64, N_y)
 
 struct Setup_Param{IT<:Int, FT<:AbstractFloat}
     N_boundary::IT
@@ -225,8 +229,8 @@ r_0,
 θ0_mean, θθ0_cov,
 N_iter,)
 
-@info "ERRORs are :" , norm(exki_obj.θ_mean[end] - θ_post), norm(exki_obj.θθ_cov[end] - Σ_post)
-    
-    
-    
- 
+# @info "ERRORs are :" , norm(exki_obj.θ_mean[end] - θ_post), norm(exki_obj.θθ_cov[end] - Σ_post)
+@info norm(truth - exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain])/sqrt(N_domain)
+figure()
+plot(truth)
+plot(exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain])
