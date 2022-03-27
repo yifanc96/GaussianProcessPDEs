@@ -184,7 +184,7 @@ truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
 
 
 
-N_iter = 10
+N_iter = 20
 N_θ = 2*N_domain+N_boundary
 
 r_0, Σ_0 = zeros(Float64, N_θ), Σ0_init
@@ -193,8 +193,8 @@ r_0, Σ_0 = zeros(Float64, N_θ), Σ0_init
 
 N_y = N_boundary+N_domain
 Σ_η = zeros(N_boundary+N_domain, N_boundary+N_domain)
-Σ_η[1:N_boundary,1:N_boundary] = 1e-6*diagm(diag(Σ_0[1:N_boundary,1:N_boundary]))
-Σ_η[N_boundary+1:end,N_boundary+1:end] = 1e-6*diagm(diag(Σ_0[N_boundary+N_domain+1:end,N_boundary+N_domain+1:end]))
+Σ_η[1:N_boundary,1:N_boundary] = 1e-2*diagm(diag(Σ_0[1:N_boundary,1:N_boundary]))
+Σ_η[N_boundary+1:end,N_boundary+1:end] = 1e-2*diagm(diag(Σ_0[N_boundary+N_domain+1:end,N_boundary+N_domain+1:end]))
 y = zeros(Float64, N_y)
 
 struct Setup_Param{IT<:Int, FT<:AbstractFloat}
@@ -219,7 +219,7 @@ end
 
 s_param = Setup_Param(N_boundary, N_domain, α, m, rhs, bdy, N_θ, N_y)
 
-method = "ExKF"
+method = "ExKI"
 # UKI-1
 exki_obj = ExKI_Run(s_param, forward, 
 method,
@@ -232,5 +232,11 @@ N_iter,)
 # @info "ERRORs are :" , norm(exki_obj.θ_mean[end] - θ_post), norm(exki_obj.θθ_cov[end] - Σ_post)
 @info norm(truth - exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain])/sqrt(N_domain)
 figure()
-plot(truth)
-plot(exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain])
+plot(truth, "-o", markersize=2, label="Reference")
+sol_mean = exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain]
+sol_std = sqrt.(diag(exki_obj.θθ_cov[end][N_boundary+1:N_boundary+N_domain, N_boundary+1:N_boundary+N_domain]))
+plot(sol_mean, label="Prediction", color="C1")
+plot(sol_mean - sol_std, "--", color="C1")
+plot(sol_mean + sol_std, "--", color="C1")
+
+legend()

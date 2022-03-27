@@ -121,13 +121,10 @@ function update_ensemble!(exki::ExKIObj{FT, IT}, forward::Function) where {FT<:A
         θθ_cov =  θθ_p_cov - tmp*θf_cov' 
     elseif exki.method == "ExKF"
         Δt = 1.0/exki.N_iter
-        
-        Δt = 1.0
 
         θ_p_mean  = θ_mean
         θθ_p_cov =   θθ_cov
         
-
         g_mean, dg = forward(θ_p_mean)
         θg_cov = θθ_p_cov * dg'
 
