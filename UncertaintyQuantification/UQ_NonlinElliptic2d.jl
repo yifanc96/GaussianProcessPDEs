@@ -231,12 +231,31 @@ N_iter,)
 
 # @info "ERRORs are :" , norm(exki_obj.θ_mean[end] - θ_post), norm(exki_obj.θθ_cov[end] - Σ_post)
 @info norm(truth - exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain])/sqrt(N_domain)
-figure()
-plot(truth, "-o", markersize=2, label="Reference")
-sol_mean = exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain]
-sol_std = sqrt.(diag(exki_obj.θθ_cov[end][N_boundary+1:N_boundary+N_domain, N_boundary+1:N_boundary+N_domain]))
-plot(sol_mean, label="Prediction", color="C1")
-plot(sol_mean - sol_std, "--", color="C1")
-plot(sol_mean + sol_std, "--", color="C1")
+# figure()
+# plot(truth, "-o", markersize=2, label="Reference")
+# sol_mean = exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain]
+# sol_std = sqrt.(diag(exki_obj.θθ_cov[end][N_boundary+1:N_boundary+N_domain, N_boundary+1:N_boundary+N_domain]))
+# plot(sol_mean, label="Prediction", color="C1")
+# plot(sol_mean - sol_std, "--", color="C1")
+# plot(sol_mean + sol_std, "--", color="C1")
 
-legend()
+# legend()
+
+
+Nh = convert(Int,sqrt(N_domain))
+figure()
+plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth,Nh,Nh), label = "Reference")
+plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_mean - sol_std,Nh,Nh), color="C1", label = "Lower")
+plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_mean + sol_std,Nh,Nh), color="C1", label = "Upper")
+display(gcf())
+
+
+figure()
+contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(abs.(truth-sol_mean),Nh,Nh))
+colorbar()
+display(gcf())
+
+figure()
+contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
+colorbar()
+display(gcf())
