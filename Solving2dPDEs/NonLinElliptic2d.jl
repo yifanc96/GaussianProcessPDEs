@@ -105,19 +105,19 @@ function iterGPR_exact(eqn, cov, X_domain, X_boundary, sol_init, nugget, GNsteps
 end 
 
 
-α = 100.0
+α = 0.0
 m = 3
 Ω = [[0,1] [0,1]]
-h_in = 0.02
-h_bd = 0.02
+h_in = 0.025
+h_bd = 0.025
 lengthscale = 0.3
-kernel = "Matern7half"
-cov = MaternCovariance7_2(lengthscale)
-nugget = 1e-10
-GNsteps = 10
+kernel = "Matern5half"
+cov = MaternCovariance5_2(lengthscale)
+nugget = 1e-8
+GNsteps = 1
 
 # ground truth solution
-freq = 600
+freq = 1000
 s = 4
 function fun_u(x)
     ans = 0
@@ -145,6 +145,13 @@ end
 @info "[solver started] NonlinElliptic2d"
 @info "[equation] -Δu + $α u^$m = f"
 eqn = NonlinElliptic2d(α,m,Ω,fun_bdy,fun_rhs)
+
+
+# N_domain = 2000
+# N_boundary = 400
+# X_domain, X_boundary = sample_points_rdm(eqn,N_domain, N_boundary)
+
+
 X_domain, X_boundary = sample_points_grid(eqn, h_in, h_bd)
 N_domain = size(X_domain,2)
 N_boundary = size(X_boundary,2)
@@ -157,14 +164,14 @@ N_boundary = size(X_boundary,2)
 sol_init = zeros(N_domain) # initial solution
 truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
 @time sol_exact = iterGPR_exact(eqn, cov, X_domain, X_boundary, sol_init, nugget, GNsteps)
-pts_accuracy_exact = sqrt(sum((truth-sol_exact).^2)/N_domain)
+pts_accuracy_exact = sqrt(sum((truth-sol_exact).^2)/sum(truth.^2))
 @info "[L2 accuracy: exact method] $pts_accuracy_exact"
-pts_max_accuracy_exact = maximum(abs.(truth-sol_exact))
+pts_max_accuracy_exact = maximum(abs.(truth-sol_exact))/maximum(abs.(truth))
 @info "[Linf accuracy: exact method] $pts_max_accuracy_exact"
 
-figure()
-plot(truth)
-plot(sol_exact)
+# figure()
+# plot(truth)
+# plot(sol_exact)
 
 
 
