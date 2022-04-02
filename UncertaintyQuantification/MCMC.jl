@@ -14,6 +14,16 @@ function log_bayesian_posterior(s_param, θ::Array{Float64,1}, forward::Function
 end
 
 
+function d_log_bayesian_posterior(s_param, θ::Array{Float64,1}, forward::Function, 
+    y::Array{Float64,1},  Σ_η::Array{Float64,2}, 
+    μ0::Array{Float64,1}, Σ0::Array{Float64,2})
+
+    Gu, dGu = forward(s_param, θ)
+    dΦ = dGu'* (Σ_η\(y - Gu)) - Σ0\(θ - μ0)
+    return dΦ
+
+end
+
 function log_likelihood(s_param, θ::Array{Float64,1}, forward::Function, 
     y::Array{Float64,1},  Σ_η::Array{Float64,2})
 
@@ -98,3 +108,69 @@ function PCN_Run(log_likelihood::Function, θ0::Array{FT,1}, θθ0_cov::Array{FT
     
     return θs 
 end
+
+
+
+
+
+
+# Stein variational gradient descent 
+function SVGD_Kernel(θ; h = -1)
+    J, nd = size(θ)
+
+    XY = θ*θ';
+    x2= sum(θ.^2, dims=2);
+    X2e = repeat(x2, 1, J);
+    pairwise_dists = X2e + X2e' - 2*XY
+
+    if h < 0
+        h = median(pairwise_dists)  
+        h = sqrt(0.5 * h / log(J+1))
+    end
+    # compute the rbf kernel
+    Kxy = exp.( -pairwise_dists / h^2 / 2)
+
+    dxkxy = -Kxy * θ
+    sumkxy = sum(Kxy, dims=2)
+    for i = 1:nd
+        dxkxy[:, i] = dxkxy[:,i] + θ[:,i].*sumkxy
+    end
+
+    dxkxy = dxkxy / (h^2)
+    return Kxy, dxkxy
+end
+
+# lnprob(θ) = ∇ log p(θ)
+# θs0 is a J by n_dim matrix
+function SVGD_Run(θs0, lnprob, n_ite::IT = 1000, stepsize::FT = 1e-3, alpha = 0.9) where {FT<:AbstractFloat, IT<:Int}
+        # Check input
+    
+    θs = copy(θs0) 
+    lnpgrad = similar(θs0)
+    J, nd = size(θs0)
+    # adagrad with momentum
+    fudge_factor = 1e-6
+    historical_grad = 0
+    
+    for iter = 1:n_ite
+        for i = 1:J
+            lnpgrad[i, :] = lnprob(θs[i, :])
+        end
+        # calculating the kernel matrix
+        kxy, dxkxy = SVGD_Kernel(θs; h = -1)  
+        grad_theta = (kxy * lnpgrad + dxkxy) / J  
+        
+        # adagrad 
+        if iter == 1
+            historical_grad = historical_grad .+ grad_theta .^ 2
+        else
+            historical_grad .= alpha * historical_grad .+ (1 - alpha) * (grad_theta .^ 2)
+        end
+
+        adj_grad = grad_theta ./ (fudge_factor .+ sqrt.(historical_grad))
+        θs = θs + stepsize * adj_grad 
+    end     
+
+    return θs
+end
+   
