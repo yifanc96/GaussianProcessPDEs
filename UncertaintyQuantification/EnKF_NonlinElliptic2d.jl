@@ -233,8 +233,8 @@ N_iter,)
 @info norm(truth - exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain])/sqrt(N_domain)
 # figure()
 # plot(truth, "-o", markersize=2, label="Reference")
-# sol_mean = exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain]
-# sol_std = sqrt.(diag(exki_obj.θθ_cov[end][N_boundary+1:N_boundary+N_domain, N_boundary+1:N_boundary+N_domain]))
+sol_mean = exki_obj.θ_mean[end][N_boundary+1:N_boundary+N_domain]
+sol_std = sqrt.(diag(exki_obj.θθ_cov[end][N_boundary+1:N_boundary+N_domain, N_boundary+1:N_boundary+N_domain]))
 # plot(sol_mean, label="Prediction", color="C1")
 # plot(sol_mean - sol_std, "--", color="C1")
 # plot(sol_mean + sol_std, "--", color="C1")
