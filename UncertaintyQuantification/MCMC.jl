@@ -1,3 +1,19 @@
+using Statistics
+using LinearAlgebra
+using Distributions
+using Random
+
+function log_bayesian_posterior(s_param, θ::Array{Float64,1}, forward::Function, 
+    y::Array{Float64,1},  Σ_η::Array{Float64,2}, 
+    μ0::Array{Float64,1}, Σ0::Array{Float64,2})
+
+    Gu = forward(s_param, θ)
+    Φ = - 0.5*(y - Gu)'/Σ_η*(y - Gu) - 0.5*(θ - μ0)'/Σ0*(θ - μ0)
+    return Φ
+
+end
+
+
 function log_likelihood(s_param, θ::Array{Float64,1}, forward::Function, 
     y::Array{Float64,1},  Σ_η::Array{Float64,2})
 
