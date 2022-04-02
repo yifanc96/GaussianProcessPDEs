@@ -1,3 +1,14 @@
+function log_likelihood(s_param, θ::Array{Float64,1}, forward::Function, 
+    y::Array{Float64,1},  Σ_η::Array{Float64,2})
+
+    Gu = forward(s_param, θ)
+    Φ = - 0.5*(y - Gu)'/Σ_η*(y - Gu)
+    return Φ
+
+end
+
+
+
 """
 When the density function is Φ/Z, 
 The f_density function return log(Φ) instead of Φ
