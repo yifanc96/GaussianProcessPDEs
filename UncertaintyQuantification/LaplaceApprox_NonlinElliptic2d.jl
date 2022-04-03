@@ -80,9 +80,13 @@ function get_Gram_matrices(eqn::NonlinElliptic2d, cov::AbstractCovarianceFunctio
     measurements[1] = meas_δ; measurements[2] = meas_Δδ
     cov(Theta_train, reduce(vcat,measurements))
     
-    Theta_test = zeros(N_domain,N_domain+N_boundary)
-    cov(view(Theta_test,1:N_domain,1:N_boundary), meas_test_int, meas_δ)
-    cov(view(Theta_test,1:N_domain,N_boundary+1:N_domain+N_boundary), meas_test_int, meas_Δδ)
+    Theta_test = zeros(N_domain+N_boundary,N_domain+N_boundary)
+    measurements_δ = Vector{Vector{<:AbstractPointMeasurement}}(undef,2)
+    measurements_δ[1] = meas_δ; measurements_δ[2] = meas_test_int
+
+    cov(Theta_test, reduce(vcat,measurements_δ), reduce(vcat,measurements))
+    # cov(view(Theta_test,1:N_domain,1:N_boundary), meas_test_int, meas_δ)
+    # cov(view(Theta_test,1:N_domain,N_boundary+1:N_domain+N_boundary), meas_test_int, meas_Δδ)
     return Theta_train, Theta_test
 end
 
@@ -104,7 +108,7 @@ function iterGPR_exact(eqn, cov, X_domain, X_boundary, sol_init, noise, GNsteps)
     N_domain = size(X_domain,2)
     N_boundary = size(X_boundary,2)
     # get the rhs and bdy data
-    rhs = [eqn.rhs(X_domain[:,i]) for i in 1:N_domain]
+    rhs = [eqn.rhs(X_domain[:,i]) for i in 1:N_domain] .+ sqrt(noise)*randn(N_domain)
     bdy = [eqn.bdy(X_boundary[:,i]) for i in 1:N_boundary]
     v = sol_init
 
@@ -112,27 +116,27 @@ function iterGPR_exact(eqn, cov, X_domain, X_boundary, sol_init, noise, GNsteps)
     Theta_test = zeros(N_domain,N_domain+N_boundary)
     for _ in 1:GNsteps
         Theta_train, Theta_test = get_Gram_matrices(eqn, cov, X_domain, X_boundary, v)
-        rhs_now = vcat(bdy, rhs+eqn.α*(eqn.m-1)*v.^eqn.m)
+        rhs_now = vcat(bdy, rhs.+eqn.α*(eqn.m-1)*v[N_boundary+1:end].^eqn.m)
     
         v = Theta_test*(((Theta_train+noise*LinearAlgebra.I))\rhs_now)
     end
 
     Cov = get_initial_covariance(cov, X_domain, X_boundary)
-    Cov_posterior = Cov[N_boundary+1:end,N_boundary+1:end] .- Theta_test*(((Theta_train+noise*LinearAlgebra.I))\Theta_test')
-    return v, Cov_posterior
+    Cov_posterior = Cov .- Theta_test*(((Theta_train+noise*LinearAlgebra.I))\Theta_test')
+    return v[N_boundary+1:end], Cov_posterior
 end 
 
 
-α = 0.0
+α = 10.0
 m = 3
 Ω = [[0,1] [0,1]]
-h_in = 0.04
-h_bd = 0.04
+h_in = 0.02
+h_bd = 0.02
 lengthscale = 0.3
 kernel = "Matern5half"
 cov = MaternCovariance5_2(lengthscale)
-noise = 1e-4
-GNsteps = 1
+noise = 0.0001
+GNsteps = 3
 
 # ground truth solution
 freq = 1000
@@ -152,7 +156,7 @@ function fun_rhs(x)
     @inbounds for k = 1:freq
         ans += (2*k^2*pi^2)*sin(pi*k*x[1])*sin(pi*k*x[2])/k^s 
     end
-    return ans + α*fun_u(x)^m
+    return ans + α*fun_u(x)^m 
 end
 
 # boundary value
@@ -179,7 +183,7 @@ N_boundary = size(X_boundary,2)
 @info "[noise] $noise" 
 @info "[GNsteps] $GNsteps" 
 
-sol_init = zeros(N_domain) # initial solution
+sol_init = zeros(N_domain+N_boundary) # initial solution
 truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
 @time sol_exact, sol_postvar = iterGPR_exact(eqn, cov, X_domain, X_boundary, sol_init, noise, GNsteps)
 pts_accuracy_exact = sqrt(sum((truth-sol_exact).^2)/sum(truth.^2))
@@ -187,7 +191,7 @@ pts_accuracy_exact = sqrt(sum((truth-sol_exact).^2)/sum(truth.^2))
 pts_max_accuracy_exact = maximum(abs.(truth-sol_exact))/maximum(abs.(truth))
 @info "[Linf accuracy: exact method] $pts_max_accuracy_exact"
 
-sol_std = [sqrt(sol_postvar[i,i]) for i in 1:N_domain]
+sol_std = [sqrt(sol_postvar[i,i]) for i in N_boundary+1:N_boundary+N_domain]
 
 Nh = convert(Int,sqrt(N_domain))
 figure()
