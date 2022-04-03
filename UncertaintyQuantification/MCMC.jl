@@ -19,8 +19,9 @@ function d_log_bayesian_posterior(s_param, θ::Array{Float64,1}, forward::Functi
     μ0::Array{Float64,1}, Σ0::Array{Float64,2})
 
     Gu, dGu = forward(s_param, θ)
+    Φ = - 0.5*(y - Gu)'/Σ_η*(y - Gu) - 0.5*(θ - μ0)'/Σ0*(θ - μ0)
     dΦ = dGu'* (Σ_η\(y - Gu)) - Σ0\(θ - μ0)
-    return dΦ
+    return Φ, dΦ
 
 end
 
@@ -38,7 +39,7 @@ end
 When the density function is Φ/Z, 
 The f_density function return log(Φ) instead of Φ
 """
-function RWMCMC_Run(log_bayesian_posterior::Function, θ0::Array{FT,1}, step_length::FT, n_ite::IT; seed::IT=11) where {FT<:AbstractFloat, IT<:Int}
+function RWMCMC_Run(log_bayesian_posterior::Function, θ0::Array{FT,1}, τ::FT, n_ite::IT; seed::IT=11) where {FT<:AbstractFloat, IT<:Int}
     
     N_θ = length(θ0)
     θs = zeros(Float64, n_ite, N_θ)
@@ -50,7 +51,7 @@ function RWMCMC_Run(log_bayesian_posterior::Function, θ0::Array{FT,1}, step_len
     Random.seed!(seed)
     for i = 2:n_ite
         θ_p = θs[i-1, :] 
-        θ = θ_p + step_length * rand(Normal(0, 1), N_θ)
+        θ = θ_p + τ * rand(Normal(0, 1), N_θ)
         
         
         fs[i] = log_bayesian_posterior(θ)
@@ -154,7 +155,7 @@ function SVGD_Run(θs0, lnprob, n_ite::IT = 1000, stepsize::FT = 1e-3, alpha = 0
     
     for iter = 1:n_ite
         for i = 1:J
-            lnpgrad[i, :] = lnprob(θs[i, :])
+            _, lnpgrad[i, :] = lnprob(θs[i, :])
         end
         # calculating the kernel matrix
         kxy, dxkxy = SVGD_Kernel(θs; h = -1)  
@@ -174,3 +175,47 @@ function SVGD_Run(θs0, lnprob, n_ite::IT = 1000, stepsize::FT = 1e-3, alpha = 0
     return θs
 end
    
+
+"""
+Metropolis Adjusted Langevin Algorithm
+When the density function is Φ/Z, 
+The f_density function return log(Φ) instead of Φ
+"""
+function MALA_Run(d_log_bayesian_posterior::Function, θ0::Array{FT,1}, τ::FT, n_ite::IT; seed::IT=11) where {FT<:AbstractFloat, IT<:Int}
+    
+    N_θ = length(θ0)
+    θs = zeros(Float64, n_ite, N_θ)
+    fs = zeros(Float64, n_ite)
+    dfs = zeros(Float64, n_ite, N_θ)
+    
+    θs[1, :] .= θ0
+    fs[1], dfs[1, :] = d_log_bayesian_posterior(θ0)
+    
+    Random.seed!(seed)
+    for i = 2:n_ite
+        θ_p = θs[i-1, :] 
+        θ = θ_p + τ *dfs[i-1, :] + sqrt(2τ)*rand(Normal(0,1), N_θ)
+        
+        
+        fs[i], dfs[i, :] = d_log_bayesian_posterior(θ)
+        α = min(1.0, exp( (fs[i]   - norm(θ_p - θ - τ *dfs[i, :])^2/(4τ)  ) - 
+                          (fs[i-1] - norm(θ - θ_p - τ *dfs[i-1, :])^2/(4τ))  
+                        )
+                )
+        # @info α , θ,  fs[i], dfs[i,:], θ_p, fs[i-1], dfs[i-1,:], 
+        if α > rand(Uniform(0, 1))
+            # accept
+            θs[i, :] = θ
+            fs[i] = fs[i]
+            dfs[i, :] = dfs[i, :]
+        else
+            # reject
+            θs[i, :] = θ_p
+            fs[i] = fs[i-1]
+            dfs[i, :] = dfs[i-1, :]
+        end
+
+    end
+    
+    return θs 
+end

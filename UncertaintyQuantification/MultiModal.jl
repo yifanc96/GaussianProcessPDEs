@@ -34,12 +34,16 @@ ln_posterior(θ) = log_bayesian_posterior(s_param, θ, double_well,
 d_ln_posterior(θ) = d_log_bayesian_posterior(s_param, θ, d_double_well, 
 y,  Σ_η, μ0, Σ0)
 
-
-method = "RWMCMC" # SVGD
+# "MALA"  "RWMCMC"  "SVGD"
+method = "SVGD" 
 if method == "RWMCMC"
     θ0 = [-0.3]
     step_length, n_ite = 0.2, 10^6
     θs = RWMCMC_Run(ln_posterior, θ0, step_length, n_ite) 
+elseif method == "MALA"
+    θ0 = [-0.3]
+    step_length, n_ite = 0.002, 10^6
+    θs = MALA_Run(d_ln_posterior, θ0, step_length, n_ite) 
 elseif method == "SVGD"
     J, n_ite = 100, 1000
     θs0 = randn(J,1)
