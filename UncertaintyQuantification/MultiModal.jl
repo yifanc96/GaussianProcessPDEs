@@ -34,8 +34,8 @@ ln_posterior(θ) = log_bayesian_posterior(s_param, θ, double_well,
 d_ln_posterior(θ) = d_log_bayesian_posterior(s_param, θ, d_double_well, 
 y,  Σ_η, μ0, Σ0)
 
-# "MALA"  "RWMCMC"  "SVGD"
-method = "SVGD" 
+# "MALA"  "RWMCMC"  "SVGD"  "emcee"
+method = "emcee"
 if method == "RWMCMC"
     θ0 = [-0.3]
     step_length, n_ite = 0.2, 10^6
@@ -48,6 +48,11 @@ elseif method == "SVGD"
     J, n_ite = 100, 1000
     θs0 = randn(J,1)
     θs = SVGD_Run(θs0, d_ln_posterior, n_ite)
+elseif method == "emcee"
+    J, n_ite = 100, 100
+    θs0 = randn(J,1)
+    θs = emcee_Run(ln_posterior, θs0, n_ite) 
+    θs = reshape(θs, (J*n_ite, 1))
 end
 
 # Plot
