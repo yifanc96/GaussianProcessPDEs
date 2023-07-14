@@ -286,12 +286,13 @@ function main(args)
     m = args.m::Int
     Ω = [[0,1] [0,1]]
     # ground truth solution
-    freq = 600
+    freq = 50
     s = 4
     function fun_u(x)
         ans = 0
-        @inbounds for k = 1:freq
-            ans += sin(pi*k*x[1])*sin(pi*k*x[2])/k^s 
+        @inbounds for k1 = 1:freq
+            for k2 = 1:freq
+            ans += sin(pi*k1*x[1])*sin(pi*k2*x[2])/(k1^2+k2^2)^(s/2)
             # H^t norm squared is sum 1/k^{2s-2t}, so in H^{s-1/2}
         end
         return ans
@@ -300,8 +301,10 @@ function main(args)
     # right hand side
     function fun_rhs(x)
         ans = 0
-        @inbounds for k = 1:freq
-            ans += (2*k^2*pi^2)*sin(pi*k*x[1])*sin(pi*k*x[2])/k^s 
+        @inbounds for k1 = 1:freq
+            for k2 = 1:freq
+            ans += pi^2*sin(pi*k1*x[1])*sin(pi*k2*x[2])/(k1^2+k2^2)^(s/2-1)
+            # H^t norm squared is sum 1/k^{2s-2t}, so in H^{s-1/2}
         end
         return ans + α*fun_u(x)^m
     end

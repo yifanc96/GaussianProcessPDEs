@@ -5,6 +5,8 @@ using LinearAlgebra
 # logging
 using Logging
 using PyPlot
+using Random, Distributions
+
 ## PDEs type
 abstract type AbstractPDEs end
 struct NonlinElliptic2d{Tα,Tm,TΩ} <: AbstractPDEs
@@ -108,22 +110,20 @@ end
 α = 0.0
 m = 3
 Ω = [[0,1] [0,1]]
-h_in = 0.025
-h_bd = 0.025
-lengthscale = 0.3
-kernel = "Matern5half"
-cov = MaternCovariance5_2(lengthscale)
-nugget = 1e-8
-GNsteps = 1
+
 
 # ground truth solution
-freq = 1000
-s = 4
+freq = 50
+s = 2
+
+const xi = randn(freq,freq)
 function fun_u(x)
     ans = 0
-    @inbounds for k = 1:freq
-        ans += sin(pi*k*x[1])*sin(pi*k*x[2])/k^s 
+    @inbounds for k1 = 1:freq
+        for k2 = 1:freq
+        ans += xi[k1,k2]*sin(pi*k1*x[1])*sin(pi*k2*x[2])/(k1^2+k2^2)^(s/2)
         # H^t norm squared is sum 1/k^{2s-2t}, so in H^{s-1/2}
+        end
     end
     return ans
 end
@@ -131,8 +131,11 @@ end
 # right hand side
 function fun_rhs(x)
     ans = 0
-    @inbounds for k = 1:freq
-        ans += (2*k^2*pi^2)*sin(pi*k*x[1])*sin(pi*k*x[2])/k^s 
+    @inbounds for k1 = 1:freq
+        for k2 = 1:freq
+        ans += xi[k1,k2]*pi^2*sin(pi*k1*x[1])*sin(pi*k2*x[2])/(k1^2+k2^2)^(s/2-1)
+        # H^t norm squared is sum 1/k^{2s-2t}, so in H^{s-1/2}
+        end
     end
     return ans + α*fun_u(x)^m
 end
@@ -146,15 +149,24 @@ end
 @info "[equation] -Δu + $α u^$m = f"
 eqn = NonlinElliptic2d(α,m,Ω,fun_bdy,fun_rhs)
 
+Random.seed!(3)
+N_domain = 2000
+N_boundary = 200
+X_domain, X_boundary = sample_points_rdm(eqn,N_domain, N_boundary)
 
-# N_domain = 2000
-# N_boundary = 400
-# X_domain, X_boundary = sample_points_rdm(eqn,N_domain, N_boundary)
+# h_in = 0.04
+# h_bd = 0.04
+# X_domain, X_boundary = sample_points_grid(eqn, h_in, h_bd)
+# N_domain = size(X_domain,2)
+# N_boundary = size(X_boundary,2)
 
+lengthscale = 0.2
+# kernel = "Matern5half"
+cov = MaternCovariance7_2(lengthscale)
 
-X_domain, X_boundary = sample_points_grid(eqn, h_in, h_bd)
-N_domain = size(X_domain,2)
-N_boundary = size(X_boundary,2)
+nugget = 1e-10
+GNsteps = 1
+
 @info "[sample points] grid size $h_in"
 @info "[sample points] N_domain is $N_domain, N_boundary is $N_boundary"  
 @info "[kernel] choose $kernel, lengthscale $lengthscale\n"  
@@ -164,9 +176,11 @@ N_boundary = size(X_boundary,2)
 sol_init = zeros(N_domain) # initial solution
 truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
 @time sol_exact = iterGPR_exact(eqn, cov, X_domain, X_boundary, sol_init, nugget, GNsteps)
-pts_accuracy_exact = sqrt(sum((truth-sol_exact).^2)/sum(truth.^2))
+pts_accuracy_exact = sqrt(sum((truth-sol_exact).^2))/sqrt(N_domain)
+# /sum(truth.^2))
 @info "[L2 accuracy: exact method] $pts_accuracy_exact"
-pts_max_accuracy_exact = maximum(abs.(truth-sol_exact))/maximum(abs.(truth))
+pts_max_accuracy_exact = maximum(abs.(truth-sol_exact))
+# /maximum(abs.(truth))
 @info "[Linf accuracy: exact method] $pts_max_accuracy_exact"
 
 # figure()

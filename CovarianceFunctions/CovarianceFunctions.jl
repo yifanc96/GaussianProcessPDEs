@@ -264,7 +264,7 @@ function (cov::GaussianCovariance)(x::Δ∇δPointMeasurement, y::Δ∇δPointMe
     D2F(t,a) = (t^2 - a^2*d)/(a^4)*exp(-t^2/(2*a^2));
     D4F(t,a) = (a^4*d*(2+d)-2*a^2*(2+d)*t^2+t^4)*exp(-t^2/(2*a^2))/a^8
     DF(t,a) = -exp(-t^2/(2*a^2))/a^2
-    D3F(t,a) = exp(-t^2/(2*a^2))*(a^2*(2+d)*t-t^3)/a^6
+    D3F(t,a) = exp(-t^2/(2*a^2))*(a^2*(2+d)*-t^2)/a^6
     DDF(t,a) = exp(-t^2/(2*a^2))/a^4
     vec = x.coordinate - y.coordinate
     dist = norm(vec);

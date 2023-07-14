@@ -72,7 +72,7 @@ end
 ## PDEs type
 abstract type AbstractPDEs end
 struct NonlinElliptic2d{Tα,Tm,TΩ} <: AbstractPDEs
-    # eqn: -Δu + α*u^m = f in [Ω[1,1],Ω[2,1]]*[Ω[1,2],Ω[2,2]]
+    # eqn: -∇̇⋅(a∇u) = f in [Ω[1,1],Ω[2,1]]*[Ω[1,2],Ω[2,2]]
     α::Tα
     m::Tm
     Ω::TΩ

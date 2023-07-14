@@ -91,10 +91,10 @@ function  get_initial_covariance(cov::AbstractCovarianceFunction, X_domain, X_bo
     N_domain = size(X_domain,2)
     N_boundary = size(X_boundary,2)
     meas_δ_bd = [PointMeasurement{d}(SVector{d,Float64}(X_boundary[:,i])) for i = 1:N_boundary]
-    meas_bd_int = [PointMeasurement{d}(SVector{d,Float64}(X_domain[:,i])) for i = 1:N_domain]
+    meas_δ_int = [PointMeasurement{d}(SVector{d,Float64}(X_domain[:,i])) for i = 1:N_domain]
     Theta_initial = zeros(N_domain+N_boundary,N_domain+N_boundary)
     measurements = Vector{Vector{<:AbstractPointMeasurement}}(undef,2)
-    measurements[1] = meas_δ_bd; measurements[2] = meas_bd_int
+    measurements[1] = meas_δ_bd; measurements[2] = meas_δ_int
     cov(Theta_initial, reduce(vcat,measurements))
     return Theta_initial
 end
@@ -103,10 +103,10 @@ function  get_initial_covariance(cov::AbstractCovarianceFunction, X_domain)
     d = 2
     N_domain = size(X_domain,2)
 
-    meas_bd_int = [PointMeasurement{d}(SVector{d,Float64}(X_domain[:,i])) for i = 1:N_domain]
+    meas_δ_int = [PointMeasurement{d}(SVector{d,Float64}(X_domain[:,i])) for i = 1:N_domain]
 
     Theta_initial = zeros(N_domain,N_domain)
-    cov(Theta_initial, meas_bd_int)
+    cov(Theta_initial, meas_δ_int)
     return Theta_initial
 end
 
@@ -148,7 +148,7 @@ lengthscale = 0.3
 kernel = "Matern5half"
 cov = MaternCovariance5_2(lengthscale)
 noise = 0.0
-# 0.0001
+# noise = 1.0
 
 GNsteps = 4
 
@@ -217,44 +217,54 @@ pts_max_accuracy_exact = maximum(abs.(truth-sol_exact))/maximum(abs.(truth))
 sol_std = [sqrt(abs(sol_postvar[i,i])) for i in 1:N_domain]
 
 Nh = convert(Int,sqrt(N_domain))
-# figure()
-# plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth,Nh,Nh), label = "Reference")
-# plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact - sol_std,Nh,Nh), color="C1", label = "Lower")
-# plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact + sol_std,Nh,Nh), color="C1", label = "Upper")
-# display(gcf())
 
 
-# figure()
-# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(abs.(truth-sol_exact),Nh,Nh))
-# colorbar()
-# display(gcf())
+figure()
+plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth,Nh,Nh), label = "Reference")
+plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact - sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Lower RKHS bound")
+plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact + sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Upper RKHS bound")
+display(gcf())
 
-# figure()
-# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
-# colorbar()
-# display(gcf())
+
+figure()
+contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth - sol_exact + sqrt(rkhs_norm2)*sol_std,Nh,Nh))
+colorbar()
+display(gcf())
+
+figure()
+contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact + sqrt(rkhs_norm2)*sol_std - truth,Nh,Nh))
+colorbar()
+display(gcf())
+
+figure()
+contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
+colorbar()
+display(gcf())
 
 
 figure()
 idx = Nh÷2
 plot(X_domain[2,1:Nh], reshape(truth,Nh,Nh)[idx,:], label = "truth")
 plot(X_domain[2,1:Nh], reshape(sol_exact,Nh,Nh)[idx,:], label = "MAP")
-plot(X_domain[2,1:Nh], reshape(sol_exact + sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper CI")
-plot(X_domain[2,1:Nh], reshape(sol_exact - sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower CI")
+plot(X_domain[2,1:Nh], reshape(sol_exact + 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper 3 sigma CI")
+plot(X_domain[2,1:Nh], reshape(sol_exact - 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower 3 sigma CI")
+
+plot(X_domain[2,1:Nh], reshape(sol_exact + sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper RKHS bound")
+plot(X_domain[2,1:Nh], reshape(sol_exact - sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower RKHS bound")
 legend()
 display(gcf())
 
 
 ### coutour of the confidence band
-figure()
-contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact  - truth + sol_std,Nh,Nh))
-colorbar()
-display(gcf())
+# figure()
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact  - truth + sol_std,Nh,Nh))
+# colorbar()
+# display(gcf())
 
-figure()
-contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact  - truth - sol_std,Nh,Nh))
-colorbar()
-display(gcf())
+# figure()
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact  - truth - sol_std,Nh,Nh))
+# colorbar()
+# display(gcf())
 
 #### mcmc
 

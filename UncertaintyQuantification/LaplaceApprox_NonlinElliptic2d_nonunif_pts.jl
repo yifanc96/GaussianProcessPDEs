@@ -147,8 +147,8 @@ h_bd = 0.02
 lengthscale = 0.3
 kernel = "Matern5half"
 cov = MaternCovariance5_2(lengthscale)
-noise = 0.0
-# 0.0001
+# noise = 0.0
+noise = 1.0
 
 GNsteps = 4
 
@@ -191,13 +191,22 @@ end
 @info "[equation] -Δu + $α u^$m = f"
 eqn = NonlinElliptic2d(α,m,Ω,fun_bdy,fun_rhs)
 
+# non-uniform sampling
+Ω = eqn.Ω
+x1l = Ω[1,1]
+x1r = Ω[2,1]
+x2l = Ω[1,2]
+x2r = Ω[2,2]
+l = length(x1l:h_bd:x1r-h_bd)
+x = sort(rand(Float64,l-1)*(x1r-x1l).+x1l)
+y = x2l + h_in:h_in:x2r-h_in
+X_domain = reduce(hcat,[[x[i], y[j]] for i in 1:length(x) for j in 1:length(x)])
 
-# N_domain = 2000
-# N_boundary = 400
-# X_domain, X_boundary = sample_points_rdm(eqn,N_domain, N_boundary)
 
+X_boundary = vcat([x1l:h_bd:x1r-h_bd x2l*ones(l)], [x1r*ones(l) x2l:h_bd:x2r-h_bd], [x1r:-h_bd:x1l+h_bd x2r*ones(l)], [x1l*ones(l) x2r:-h_bd:x1l+h_bd])
+X_boundary = X_boundary'
 
-X_domain, X_boundary = sample_points_grid(eqn, h_in, h_bd)
+# X_domain, X_boundary = sample_points_grid(eqn, h_in, h_bd)
 N_domain = size(X_domain,2)
 N_boundary = size(X_boundary,2)
 @info "[sample points] grid size $h_in"
@@ -217,44 +226,50 @@ pts_max_accuracy_exact = maximum(abs.(truth-sol_exact))/maximum(abs.(truth))
 sol_std = [sqrt(abs(sol_postvar[i,i])) for i in 1:N_domain]
 
 Nh = convert(Int,sqrt(N_domain))
+
+
 # figure()
 # plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth,Nh,Nh), label = "Reference")
-# plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact - sol_std,Nh,Nh), color="C1", label = "Lower")
-# plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact + sol_std,Nh,Nh), color="C1", label = "Upper")
+# plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact - sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Lower RKHS bound")
+# plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact + sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Upper RKHS bound")
 # display(gcf())
 
 
 # figure()
-# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(abs.(truth-sol_exact),Nh,Nh))
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth - sol_exact + sqrt(rkhs_norm2)*sol_std,Nh,Nh))
 # colorbar()
 # display(gcf())
 
 # figure()
-# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact + sqrt(rkhs_norm2)*sol_std - truth,Nh,Nh))
 # colorbar()
 # display(gcf())
+
 
 
 figure()
 idx = Nh÷2
-plot(X_domain[2,1:Nh], reshape(truth,Nh,Nh)[idx,:], label = "truth")
-plot(X_domain[2,1:Nh], reshape(sol_exact,Nh,Nh)[idx,:], label = "MAP")
-plot(X_domain[2,1:Nh], reshape(sol_exact + sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper CI")
-plot(X_domain[2,1:Nh], reshape(sol_exact - sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower CI")
+plot(x, reshape(truth,Nh,Nh)[idx,:], marker=:d, label = "truth")
+plot(x, reshape(sol_exact,Nh,Nh)[idx,:], label = "MAP")
+plot(x, reshape(sol_exact + 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper 3 sigma CI")
+plot(x, reshape(sol_exact - 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower 3 sigma CI")
+
+plot(x, reshape(sol_exact + sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper RKHS bound")
+plot(x, reshape(sol_exact - sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower RKHS bound")
 legend()
 display(gcf())
 
 
 ### coutour of the confidence band
-figure()
-contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact  - truth + sol_std,Nh,Nh))
-colorbar()
-display(gcf())
+# figure()
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact  - truth + sol_std,Nh,Nh))
+# colorbar()
+# display(gcf())
 
-figure()
-contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact  - truth - sol_std,Nh,Nh))
-colorbar()
-display(gcf())
+# figure()
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_exact  - truth - sol_std,Nh,Nh))
+# colorbar()
+# display(gcf())
 
 #### mcmc
 
