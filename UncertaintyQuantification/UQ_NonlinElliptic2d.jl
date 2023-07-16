@@ -190,8 +190,8 @@ end
 α = 1.0
 m = 3
 Ω = [[0,1] [0,1]]
-h_in = 0.2
-h_bd = 0.2
+h_in = 0.02
+h_bd = 0.02
 lengthscale = 0.3
 kernel = "Matern5half"
 cov = MaternCovariance5_2(lengthscale)
@@ -244,25 +244,52 @@ sol_std = [sqrt(abs(sol_postvar[i,i])) for i in 1:N_domain]
 
 
 #### mcmc by MALA: noise-free
-n_ite = 10^7
-d_log_post = log_post_GP_PDE(eqn, cov, X_domain, X_boundary)
-τ = 1e-1
-# log_post(z) = d_log_post(z)[1]
-# rwmcmc_samples = RWMCMC_Run(log_post, MAP, τ ,n_ite)
-mcmc_samples = MALA_Run(d_log_post, MAP, τ ,n_ite)
+# n_ite = 10^7
+# d_log_post = log_post_GP_PDE(eqn, cov, X_domain, X_boundary)
+# τ = 1e-3
+# mcmc_samples = MALA_Run(d_log_post, MAP, τ ,n_ite)
 
 ######
 
 
 
 ### plot figures
+using PyCall
+fsize = 15.0
+tsize = 15.0
+tdir = "in"
+major = 5.0
+minor = 3.0
+lwidth = 0.8
+lhandle = 2.0
+plt.style.use("default")
+rcParams = PyDict(matplotlib["rcParams"])
+rcParams["font.size"] = fsize
+rcParams["legend.fontsize"] = tsize
+rcParams["xtick.direction"] = tdir
+rcParams["ytick.direction"] = tdir
+rcParams["xtick.major.size"] = major
+rcParams["xtick.minor.size"] = minor
+rcParams["ytick.major.size"] = 5.0
+rcParams["ytick.minor.size"] = 3.0
+rcParams["axes.linewidth"] = lwidth
+rcParams["legend.handlelength"] = lhandle
+rcParams["lines.markersize"] = 10
+
 Nh = convert(Int,sqrt(N_domain))
 
-figure()
+fig, ax = plt.subplots()
+# UQ_band = figure()
 plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth,Nh,Nh), label = "Reference")
-plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP - sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Lower RKHS bound")
-plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP + sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Upper RKHS bound")
+plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP - sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Lower RKHS bound",alpha=0.6)
+plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP + sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Upper RKHS bound",alpha=0.6)
+fig.tight_layout()
+
 display(gcf())
+savefig("UQ_confidence_band_alpha06.pdf")
+
+
+
 
 
 ## plot contour of lower and upper confidence band

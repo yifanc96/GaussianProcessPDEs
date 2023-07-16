@@ -6,6 +6,7 @@ using LinearAlgebra
 using Logging
 using PyPlot
 using Distributions
+using KernelDensity
 
 ## PDEs type
 abstract type AbstractPDEs end
@@ -117,8 +118,12 @@ function LaplaceApprox(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, 
     N_boundary = size(X_boundary)[1]
 
     # get the rhs and bdy data
-    rhs = [eqn.rhs(X_domain[i]) for i in 1:N_domain] .+ sqrt(noise_var_int) * randn(N_domain)
-    bdy = [eqn.bdy(X_boundary[i]) for i in 1:N_boundary] .+ sqrt(noise_var_bd) * randn(N_boundary)
+    # rhs = [eqn.rhs(X_domain[i]) for i in 1:N_domain] .+ sqrt(noise_var_int) * randn(N_domain)
+    # bdy = [eqn.bdy(X_boundary[i]) for i in 1:N_boundary] .+ sqrt(noise_var_bd) * randn(N_boundary)
+
+    rhs = [eqn.rhs(X_domain[i]) for i in 1:N_domain]
+    bdy = [eqn.bdy(X_boundary[i]) for i in 1:N_boundary] 
+
     Theta_train = zeros(N_domain+N_boundary, N_domain+N_boundary) 
     Theta_test = zeros(N_domain,N_domain+N_boundary)
 
@@ -162,11 +167,14 @@ function log_post_GP_PDE(eqn, cov, X_domain, X_boundary; nugget = 1e-14)
 end
 
 
+
+
+
 ### parameters
 α = 1.0
 m = 3
 Ω = [0,1]
-h_in = 0.2
+h_in = 0.05
 lengthscale = 0.3
 kernel = "Matern5half"
 cov = MaternCovariance5_2(lengthscale)
@@ -218,52 +226,76 @@ pts_max_accuracy = maximum(abs.(truth-MAP))/maximum(abs.(truth))
 sol_std = [sqrt(abs(sol_postvar[i,i])) for i in 1:N_domain]
 
 
+######
+using PyCall
+fsize = 15.0
+tsize = 15.0
+tdir = "in"
+major = 5.0
+minor = 3.0
+lwidth = 0.8
+lhandle = 2.0
+plt.style.use("default")
+rcParams = PyDict(matplotlib["rcParams"])
+rcParams["font.size"] = fsize
+rcParams["legend.fontsize"] = tsize
+rcParams["xtick.direction"] = tdir
+rcParams["ytick.direction"] = tdir
+rcParams["xtick.major.size"] = major
+rcParams["xtick.minor.size"] = minor
+rcParams["ytick.major.size"] = 5.0
+rcParams["ytick.minor.size"] = 3.0
+rcParams["axes.linewidth"] = lwidth
+rcParams["legend.handlelength"] = lhandle
+rcParams["lines.markersize"] = 10
 
 #### mcmc by MALA: noise-free
-n_ite = 10^7
+# compare MCMC with Laplace Approximation
+n_ite = 10^8
 d_log_post = log_post_GP_PDE(eqn, cov, X_domain, X_boundary)
-τ = 1e-1
-# log_post(z) = d_log_post(z)[1]
-# rwmcmc_samples = RWMCMC_Run(log_post, MAP, τ ,n_ite)
+τ = 1e-5
 mcmc_samples = MALA_Run(d_log_post, MAP, τ ,n_ite)
-
-######
-
-
-
-### plot figures
-
-
-
-## plot contour of lower and upper confidence band
-# figure()
-# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth - MAP + sqrt(rkhs_norm2)*sol_std,Nh,Nh))
-# colorbar()
-# display(gcf())
-# figure()
-# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP + sqrt(rkhs_norm2)*sol_std - truth,Nh,Nh))
-# colorbar()
-# display(gcf())
+density_mcmc = kde(mcmc_samples[10^6:10^8,3])
+fig = figure()
+plot(density_mcmc.x,density_mcmc.density, label = "MCMC")
+gmean = MAP[3]
+gstd = sol_std[3]
+density_gaussian_y = 1/(sqrt(2*pi)*gstd)*exp.(-(density_mcmc.x.-gmean).^2/(2*gstd^2))
+plot(density_mcmc.x,density_gaussian_y, label="Laplace-Approx")
+legend()
+display(gcf())
+plt.xlabel(L"$x$")
+fig.tight_layout()
+savefig("UQ_ellipticPDE_1D_LaplaceApprox-MCMC-comparison.pdf")
 
 
-## plot figure of var
-# figure()
-# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
-# colorbar()
-# display(gcf())
+### as noise goes to zeros
+array_noise_var = [1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1,1.0]
+l = size(array_noise_var)[1]
+error_MAP = zeros(l)
+error_cov = zeros(l)
 
 
-## plot one dimensional slice (middle index)
-# figure()
-# idx = Nh÷2
-# plot(X_domain[2,1:Nh], reshape(truth,Nh,Nh)[idx,:], label = "truth")
-# plot(X_domain[2,1:Nh], reshape(MAP,Nh,Nh)[idx,:], label = "MAP")
-# plot(X_domain[2,1:Nh], reshape(MAP + 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper 3 sigma CI")
-# plot(X_domain[2,1:Nh], reshape(MAP - 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower 3 sigma CI")
-# plot(X_domain[2,1:Nh], reshape(MAP + sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper RKHS bound")
-# plot(X_domain[2,1:Nh], reshape(MAP - sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower RKHS bound")
-# legend()
-# display(gcf())
+for i in 1:l
+    noise_var_bd = array_noise_var[i]
+    noise_var_int = array_noise_var[i]
+    now_MAP, now_sol_cov, _ = LaplaceApprox(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, noise_var_bd, GNsteps)
+    error_MAP[i] = norm(now_MAP.-MAP)
+    error_cov[i] = norm(now_sol_cov - sol_postvar)
+end
+
+fig  = figure()
+plot(sqrt.(array_noise_var), error_MAP, "-o", label=L"$ \| m_{β}-m_0 \|_2$")
+plot(sqrt.(array_noise_var), error_cov, "-o", label=L"$ \|C_{β}-C_0 \|_2$")
+plt.xlabel(L"$β$")
+plt.xscale("log")
+plt.yscale("log")
+legend()
+fig.tight_layout()
+display(gcf())
+savefig("UQ_ellipticPDE_1D_LaplaceApprox-beta.pdf")
+
+
 
 
 
