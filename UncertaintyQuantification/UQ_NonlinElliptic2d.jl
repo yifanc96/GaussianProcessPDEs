@@ -193,7 +193,7 @@ m = 3
 h_in = 0.02
 h_bd = 0.02
 lengthscale = 0.3
-kernel = "Matern5half"
+kernel = "Maternh5alf"
 cov = MaternCovariance5_2(lengthscale)
 noise_var_int = 0.0
 noise_var_bd = 0.0
@@ -286,7 +286,9 @@ plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape
 fig.tight_layout()
 
 display(gcf())
+
 savefig("UQ_confidence_band_alpha06.pdf")
+
 
 
 
@@ -304,11 +306,11 @@ savefig("UQ_confidence_band_alpha06.pdf")
 
 
 ## plot figure of var
-# figure()
-# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
-# colorbar()
-# display(gcf())
-
+figure()
+contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
+colorbar()
+display(gcf())
+savefig("UQ_postvar_contour.pdf")
 
 ## plot one dimensional slice (middle index)
 figure()
