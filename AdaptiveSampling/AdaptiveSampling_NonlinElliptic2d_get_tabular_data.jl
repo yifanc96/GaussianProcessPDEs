@@ -245,35 +245,11 @@ noise_var_int = 0.0
 noise_var_bd = 0.0
 GNsteps = 3
 
-# function fun_u(x)
-#     return sin(pi*x[1])*sin(pi*x[2]) + sin(3*pi*x[1])*sin(3*pi*x[2])
-# end
-# function fun_rhs(x)
-#     ans = 2*pi^2*sin(pi*x[1])*sin(pi*x[2]) + 2*(3*pi)^2*sin(3*pi*x[1])*sin(3*pi*x[2])
-#     return ans + α*fun_u(x)^m 
-# end
-
 p = 10
-# function fun_u(x)
-#     return 2^(4*p) * x[1]^p*(1-x[1])^p*x[2]^p*(1-x[2])^p
-# end
-
-# function fun_u(x)
-#     return 2^(4*p) * x[1]^(2p)*(1-x[1])^p*x[2]^(2p)*(1-x[2])^p + 2^(4p) * x[1]^(p)*(1-x[1])^(2p)*x[2]^(p)*(1-x[2])^(2p)
-# end
 
 function fun_u(x)
     return 2^(4*p) * x[1]^(2p)*(1-x[1])^p*x[2]^(2p)*(1-x[2])^p
 end
-
-# function fun_rhs(x)
-#     ans = -2^(4*p) * (
-#     (p*(p-1)* x[1]^(p-2)*(1-x[1])^p + p*(p-1)*x[1]^p*(1-x[1])^(p-2)-2*p^2*x[1]^(p-1)*(1-x[1])^(p-1)) *  x[2]^p*(1-x[2])^p
-#     + (p*(p-1)* x[2]^(p-2)*(1-x[2])^p + p*(p-1)*x[2]^p*(1-x[2])^(p-2)-2*p^2*x[2]^(p-1)*(1-x[2])^(p-1)) *  x[1]^p*(1-x[1])^p
-#     )
-#     return ans + α*fun_u(x)^m 
-# end
-
 
 
 function fun_rhs(x)
@@ -287,127 +263,90 @@ function fun_bdy(x)
     return fun_u(x)
 end
 
-eqn = NonlinElliptic2d(α,m,Ω,fun_bdy,fun_rhs)
-N_domain = 100
-N_boundary = 400
-X_domain, X_boundary = sample_points_rdm(eqn,N_domain, N_boundary)
-global X_domain, X_boundary
-N_domain = size(X_domain,2)
-N_boundary = size(X_boundary,2)
 
-@info "[solver started] NonlinElliptic2d"
-@info "[equation] -Δu + $α u^$m = f"
-@info "[sample points] Intial: N_domain is $N_domain, N_boundary is $N_boundary"  
-@info "[kernel] choose $kernel, lengthscale $lengthscale\n"  
-@info "[noise] interior var $noise_var_int, boundary var $noise_var_bd" 
-@info "[GNsteps] $GNsteps" 
+function adaptive_sampling_experiment(sampling_stratety)
 
-sol_init = zeros(N_domain) # initial solution
-truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
-
-@time MAP, rhs_now = get_MAP(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, noise_var_bd, GNsteps)
-pts_accuracy = sqrt(sum((truth-MAP).^2)/sum(truth.^2))
-
-@info "[L2 accuracy of MAP to true sol] $pts_accuracy"
-pts_max_accuracy = maximum(abs.(truth-MAP))/maximum(abs.(truth))
-@info "[Linf accuracy of MAP to true sol] $pts_max_accuracy"
-
-using PyCall
-fsize = 15.0
-tsize = 15.0
-tdir = "in"
-major = 5.0
-minor = 3.0
-lwidth = 0.8
-lhandle = 2.0
-plt.style.use("default")
-rcParams = PyDict(matplotlib["rcParams"])
-rcParams["font.size"] = fsize
-rcParams["legend.fontsize"] = tsize
-rcParams["xtick.direction"] = tdir
-rcParams["ytick.direction"] = tdir
-rcParams["xtick.major.size"] = major
-rcParams["xtick.minor.size"] = minor
-rcParams["ytick.major.size"] = 5.0
-rcParams["ytick.minor.size"] = 3.0
-rcParams["axes.linewidth"] = lwidth
-rcParams["legend.handlelength"] = lhandle
-rcParams["lines.markersize"] = 10
-
-fig = figure("pyplot_truth_solution",figsize=(8,6))
-fig, ax = PyPlot.subplots(ncols=1, sharex=false, sharey=false)
-x = 0:0.01:1
-y = 0:0.01:1
-xxyy = reduce(hcat,[[x[i], y[j]] for i in 1:length(x) for j in 1:length(x)])
-uxy = [fun_u(xxyy[:,i]) for i in 1:size(xxyy,2)]
-plot_surface(x,y,reshape(uxy,(length(x),length(y))), cmap="viridis")
-fig.tight_layout()
-display(gcf())
-savefig("sample_points_true_solution.pdf")
-
-# fig = figure("pyplot_scatterplot_initial",figsize=(8,6))
-# fig, ax = PyPlot.subplots(ncols=1, sharex=false, sharey=false)
-# sm = ax.scatter(X_domain[1,:],X_domain[2,:],s=15, c="blue", alpha = 1)
-# fig.colorbar(sm, ax=ax)
-# # ax.scatter([X_all[1,P[pts_idx]]],[X_all[2,P[pts_idx]]], s=200, c="purple")
-# fig.tight_layout()
-# display(gcf())
-
-## adaptive sampling 
-n_iter = 10
-refpts_per_iter = 500
-sample_pts_per_iter = 50
-
-## based on posterior variance
-for i_iter in 1:n_iter
-    X_test = sample_points_rdm(eqn, refpts_per_iter)
-    Theta_train, Theta_test = get_Gram_matrices(eqn, cov, X_test, X_domain, X_boundary, MAP)
-    Cov_init = get_initial_covariance(cov, X_test)
-    nugget = 1e-12
-    Cov_posterior = Cov_init .- Theta_test*(((Theta_train+nugget*diagm(diag(Theta_train))))\Theta_test')
-    Cov_diag =  [abs(Cov_posterior[i,i]) for i in 1:refpts_per_iter]
-    
-    # greedy
-    var_sort_idx = sortperm(Cov_diag, rev=true)
-    X_add = X_test[:,var_sort_idx[1:sample_pts_per_iter]]
-
-    # random
-    # X_add = X_test[:,1:sample_pts_per_iter]
-
-    # gibbs
-    # sample_indx= sample([i for i in 1:refpts_per_iter], Weights(Cov_diag/sum(Cov_diag)), sample_pts_per_iter; replace=true)
-    # X_add = X_test[:,sample_indx]
-
-    # residue based sampling
-    # res2 = get_eqn_residue(eqn,cov,X_test, X_domain,X_boundary, MAP, rhs_now)
-    # res_sort_idx = sortperm(res2, rev=true)
-    # X_add = X_test[:,res_sort_idx[1:sample_pts_per_iter]]
-
-    # residue + sigma
-    # res2 = get_eqn_residue(eqn,cov,X_test, X_domain,X_boundary, MAP, rhs_now)
-    # sample_indx= sample([i for i in 1:refpts_per_iter], Weights(res2/sum(res2)), sample_pts_per_iter; replace=true)
-    # X_add = X_test[:,sample_indx]
-
-    X_domain = hcat(X_domain,X_add)
+    eqn = NonlinElliptic2d(α,m,Ω,fun_bdy,fun_rhs)
+    N_domain = 100
+    N_boundary = 400
+    X_domain, X_boundary = sample_points_rdm(eqn,N_domain, N_boundary)
     N_domain = size(X_domain,2)
+    N_boundary = size(X_boundary,2)
+
+    @info "[solver started] NonlinElliptic2d"
+    @info "[equation] -Δu + $α u^$m = f"
+    @info "[sample points] Intial: N_domain is $N_domain, N_boundary is $N_boundary"  
+    @info "[kernel] choose $kernel, lengthscale $lengthscale\n"  
+    @info "[noise] interior var $noise_var_int, boundary var $noise_var_bd" 
+    @info "[GNsteps] $GNsteps" 
+
     sol_init = zeros(N_domain) # initial solution
     truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
+
     @time MAP, rhs_now = get_MAP(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, noise_var_bd, GNsteps)
     pts_accuracy = sqrt(sum((truth-MAP).^2)/sum(truth.^2))
-    @info "[L2 accuracy of MAP to true sol] $pts_accuracy"
     pts_max_accuracy = maximum(abs.(truth-MAP))/maximum(abs.(truth))
-    @info "[Linf accuracy of MAP to true sol] $pts_max_accuracy"
+
+    ## adaptive sampling 
+    n_iter = 10
+    refpts_per_iter = 500
+    sample_pts_per_iter = 50
+
+    ## based on posterior variance
+    for i_iter in 1:n_iter
+        X_test = sample_points_rdm(eqn, refpts_per_iter)
+        Theta_train, Theta_test = get_Gram_matrices(eqn, cov, X_test, X_domain, X_boundary, MAP)
+        Cov_init = get_initial_covariance(cov, X_test)
+        nugget = 1e-12
+        Cov_posterior = Cov_init .- Theta_test*(((Theta_train+nugget*diagm(diag(Theta_train))))\Theta_test')
+        Cov_diag =  [abs(Cov_posterior[i,i]) for i in 1:refpts_per_iter]
+        
+        if sampling_stratety == "post_var"
+             # greedy
+            var_sort_idx = sortperm(Cov_diag, rev=true)
+            X_add = X_test[:,var_sort_idx[1:sample_pts_per_iter]]
+        elseif sampling_stratety == "residue"
+            res2 = get_eqn_residue(eqn,cov,X_test, X_domain,X_boundary, MAP, rhs_now)
+            res_sort_idx = sortperm(res2, rev=true)
+            X_add = X_test[:,res_sort_idx[1:sample_pts_per_iter]]
+        elseif sampling_stratety == "uniform"
+            X_add = X_test[:,1:sample_pts_per_iter]
+        end
+
+       
+        # gibbs
+        # sample_indx= sample([i for i in 1:refpts_per_iter], Weights(Cov_diag/sum(Cov_diag)), sample_pts_per_iter; replace=true)
+        # X_add = X_test[:,sample_indx]
+
+        # residue + sigma
+        # res2 = get_eqn_residue(eqn,cov,X_test, X_domain,X_boundary, MAP, rhs_now)
+        # sample_indx= sample([i for i in 1:refpts_per_iter], Weights(res2/sum(res2)), sample_pts_per_iter; replace=true)
+        # X_add = X_test[:,sample_indx]
+
+        X_domain = hcat(X_domain,X_add)
+        N_domain = size(X_domain,2)
+        sol_init = zeros(N_domain) # initial solution
+        truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
+        @time MAP, rhs_now = get_MAP(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, noise_var_bd, GNsteps)
+        pts_accuracy = sqrt(sum((truth-MAP).^2)/sum(truth.^2))
+        @info "[L2 accuracy of MAP to true sol] $pts_accuracy"
+        pts_max_accuracy = maximum(abs.(truth-MAP))/maximum(abs.(truth))
+        @info "[Linf accuracy of MAP to true sol] $pts_max_accuracy"
+    end
+
+    return pts_accuracy, pts_max_accuracy
 end
 
+strategies = ["uniform", "post_var", "residue"]
 
-fig = figure("pyplot_scatterplot_end",figsize=(8,6))
-fig, ax = PyPlot.subplots(ncols=1, sharex=false, sharey=false)
-sm = ax.scatter(X_domain[1,:],X_domain[2,:],s=15, cmap = "cividis", alpha = 1)
-# fig.colorbar(sm, ax=ax)
-# ax.scatter([X_all[1,P[pts_idx]]],[X_all[2,P[pts_idx]]], s=200, c="purple")
-fig.tight_layout()
-display(gcf())
+num_rdm = 20
+L2err = zeros((num_rdm, size(strategies)[1]))
+Linferr = zeros((num_rdm, size(strategies)[1]))
 
-
-# savefig("sample_points_with_postvar.pdf")
-
+for iter1 in 1:size(strategies)[1]
+    for iter2 in 1:num_rdm
+        pts_accuracy, pts_max_accuracy = adaptive_sampling_experiment(strategies[iter1])
+        L2err[iter2,iter1] = pts_accuracy
+        Linferr[iter2,iter1] = pts_max_accuracy
+    end
+end
