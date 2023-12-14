@@ -368,8 +368,8 @@ for i_iter in 1:n_iter
     Cov_diag =  [abs(Cov_posterior[i,i]) for i in 1:refpts_per_iter]
     
     # greedy
-    var_sort_idx = sortperm(Cov_diag, rev=true)
-    X_add = X_test[:,var_sort_idx[1:sample_pts_per_iter]]
+    # var_sort_idx = sortperm(Cov_diag, rev=true)
+    # X_add = X_test[:,var_sort_idx[1:sample_pts_per_iter]]
 
     # random
     # X_add = X_test[:,1:sample_pts_per_iter]
@@ -382,6 +382,11 @@ for i_iter in 1:n_iter
     # res2 = get_eqn_residue(eqn,cov,X_test, X_domain,X_boundary, MAP, rhs_now)
     # res_sort_idx = sortperm(res2, rev=true)
     # X_add = X_test[:,res_sort_idx[1:sample_pts_per_iter]]
+
+    # residue / std
+    res2 = get_eqn_residue(eqn,cov,X_test, X_domain,X_boundary, MAP, rhs_now)
+    res_sort_idx = sortperm(res2.*(Cov_diag), rev=true)
+    X_add = X_test[:,res_sort_idx[1:sample_pts_per_iter]]
 
     # residue + sigma
     # res2 = get_eqn_residue(eqn,cov,X_test, X_domain,X_boundary, MAP, rhs_now)

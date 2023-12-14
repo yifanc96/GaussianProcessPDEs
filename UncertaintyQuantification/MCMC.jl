@@ -82,7 +82,7 @@ function PCN_Run(log_likelihood::Function, θ0::Array{FT,1}, θθ0_cov::Array{FT
     N_θ = length(θ0)
     θs = zeros(Float64, n_ite, N_θ)
     fs = zeros(Float64, n_ite)
-    
+    α_mean = zeros(Float64, n_ite-1)
     θs[1, :] .= θ0
     fs[1] = log_likelihood(θ0)
     
@@ -94,11 +94,12 @@ function PCN_Run(log_likelihood::Function, θ0::Array{FT,1}, θθ0_cov::Array{FT
         
         fs[i] = log_likelihood(θ)
         α = min(1.0, exp(fs[i] - fs[i-1]))
+        α_mean[i-1] = α
         if α > rand(Uniform(0, 1))
             # accept
             θs[i, :] = θ
             fs[i] = fs[i]
-            @info "accept i = ", i
+            # @info "accept i = ", i
         else
             # reject
             θs[i, :] = θ_p
@@ -106,7 +107,7 @@ function PCN_Run(log_likelihood::Function, θ0::Array{FT,1}, θθ0_cov::Array{FT
         end
 
     end
-    
+    @info "average acceptance $(mean(α_mean))"
     return θs 
 end
 
@@ -187,11 +188,12 @@ function MALA_Run(d_log_bayesian_posterior::Function, θ0::Array{FT,1}, τ::FT, 
     θs = zeros(Float64, n_ite, N_θ)
     fs = zeros(Float64, n_ite)
     dfs = zeros(Float64, n_ite, N_θ)
-    
+    α_mean = zeros(Float64, n_ite-1)
     θs[1, :] .= θ0
     fs[1], dfs[1, :] = d_log_bayesian_posterior(θ0)
     
     Random.seed!(seed)
+
     for i = 2:n_ite
         θ_p = θs[i-1, :] 
         θ = θ_p + τ *dfs[i-1, :] + sqrt(2τ)*rand(Normal(0,1), N_θ)
@@ -203,6 +205,8 @@ function MALA_Run(d_log_bayesian_posterior::Function, θ0::Array{FT,1}, τ::FT, 
                         )
                 )
         # @info α , θ,  fs[i], dfs[i,:], θ_p, fs[i-1], dfs[i-1,:], 
+        # @info α
+        α_mean[i-1] = α 
         if α > rand(Uniform(0, 1))
             # accept
             θs[i, :] = θ
@@ -216,8 +220,8 @@ function MALA_Run(d_log_bayesian_posterior::Function, θ0::Array{FT,1}, τ::FT, 
         end
 
     end
-    
-    return θs 
+    @info "average acceptance $(mean(α_mean))"
+    return θs, fs 
 end
 
 
