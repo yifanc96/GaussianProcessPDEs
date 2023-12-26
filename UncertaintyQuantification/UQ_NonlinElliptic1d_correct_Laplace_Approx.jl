@@ -221,7 +221,7 @@ end
 α = 10.0
 m = 3
 Ω = [0,1]
-h_in = 0.05
+h_in = 0.02
 lengthscale = 0.3
 kernel = "Matern5half"
 cov = MaternCovariance5_2(lengthscale)
@@ -349,7 +349,7 @@ rcParams["lines.markersize"] = 10
 #### mcmc by MALA: noise-free
 # compare MCMC with Laplace Approximation
 idx = maximum([N_domain ÷ 2, 1])
-n_ite = 10^4
+n_ite = 10^6
 τ = 0.01
 
 fig = figure()

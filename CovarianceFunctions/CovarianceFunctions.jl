@@ -132,10 +132,12 @@ function (cov::MaternCovariance7_2)(x::Δ∇δPointMeasurement, y::Δ∇δPointM
     return w1_x*w1_y*D4F(dist,sigma) + (w2_x*w1_y+w1_x*w2_y)*D2F(dist,sigma) + w2_x*w2_y*F(dist,sigma) - w1_x*D3F(dist,sigma)*sum(vec.*wg_y) + w1_y*D3F(dist,sigma)*sum(vec.*wg_x) - w2_x*DF(dist,sigma)*sum(vec.*wg_y) + w2_y*DF(dist,sigma)*sum(vec.*wg_x) + (sum(-wg_x.*wg_y)*DF(dist,sigma)+sum(wg_x.*vec)*sum(-wg_y.*vec)*DDF(dist,sigma))
 end
 
+
 struct MaternCovariance9_2{Tv}<:AbstractCovarianceFunction{Tv}
     length_scale::Tv
 end
 
+# Matern covariance function
 function (cov::MaternCovariance9_2)(x::PointMeasurement, y::PointMeasurement)
     dist = norm(x.coordinate - y.coordinate);
     sigma = cov.length_scale;
@@ -177,6 +179,7 @@ function (cov::MaternCovariance9_2)(x::Δ∇δPointMeasurement, y::Δ∇δPointM
     sigma = cov.length_scale;
     return w1_x*w1_y*D4F(dist,sigma) + (w2_x*w1_y+w1_x*w2_y)*D2F(dist,sigma) + w2_x*w2_y*F(dist,sigma) - w1_x*D3F(dist,sigma)*sum(vec.*wg_y) + w1_y*D3F(dist,sigma)*sum(vec.*wg_x) - w2_x*DF(dist,sigma)*sum(vec.*wg_y) + w2_y*DF(dist,sigma)*sum(vec.*wg_x) + (sum(-wg_x.*wg_y)*DF(dist,sigma)+sum(wg_x.*vec)*sum(-wg_y.*vec)*DDF(dist,sigma))
 end
+
 
 struct MaternCovariance11_2{Tv}<:AbstractCovarianceFunction{Tv}
     length_scale::Tv
