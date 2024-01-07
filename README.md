@@ -1,6 +1,8 @@
 # GaussianProcessPDEs.jl
 This is an integrated repo for using Gaussian processes to solve PDEs, learn PDEs, solve inverse problems, for uncertainty quantification, parameter estimation as well as fast multiscale algorithms for computation with dense kernel matrices.
 
+We use Python (especially JAX, for automation and ease of code writting) and Julia (for fast algorithms and detailed speed up).
+
 ## Relevant repositories:
 * [NonLinPDEs-GPsolver](https://github.com/yifanc96/NonLinPDEs-GPsolver): Python-JAX for solving and learning PDEs using GPs
 * [Time-Dependent-PDEs-GPsolver](https://github.com/yifanc96/Time-Dependent-PDEs-GPsolver): Python-JAX for solving time dependent PDEs
