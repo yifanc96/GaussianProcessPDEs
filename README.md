@@ -16,9 +16,9 @@ We use Python (especially JAX, for automation and ease of code writting) and Jul
 
 2. Yifan Chen, Houman Owhadi, Andrew M. Stuart. "[Consistency of Empirical Bayes And Kernel Flow For Hierarchical Parameter Estimation](https://arxiv.org/abs/2005.11375), Mathematics of Computation, 2021.
 
-3. Yifan Chen, Houman Owhadi, Florian Schaefer. "[Sparse Cholesky Factorization for Solving Nonlinear PDEs via Gaussian Processes] (https://arxiv.org/abs/2304.01294)", arXiv preprint, 2023.
+3. Yifan Chen, Houman Owhadi, Florian Schaefer. "[Sparse Cholesky Factorization for Solving Nonlinear PDEs via Gaussian Processes](https://arxiv.org/abs/2304.01294)", arXiv preprint, 2023.
 
-4. Pau Batlle, Yifan Chen, Bamdad Hosseini, Houman Owhadi, Andrew M. Stuart. "[Error Analysis of Kernel/GP Methods for Nonlinear and Parametric PDEs] (https://arxiv.org/abs/2305.04962)", arXiv preprint, 2023.
+4. Pau Batlle, Yifan Chen, Bamdad Hosseini, Houman Owhadi, Andrew M. Stuart. "[Error Analysis of Kernel/GP Methods for Nonlinear and Parametric PDEs](https://arxiv.org/abs/2305.04962)", arXiv preprint, 2023.
 
 5. Yifan Chen, Thomas Y. Hou. "[Multiscale Elliptic PDEs Upscaling and Function Approximation via Subsampled Data](https://arxiv.org/abs/2010.04199)", SIAM Multiscale Modeling and Simulation, 2022.
 
