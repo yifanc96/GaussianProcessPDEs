@@ -3,6 +3,8 @@ This is an integrated repo for using Gaussian processes to solve PDEs, learn PDE
 
 We use Python (especially JAX, for automation and ease of code writting) and Julia (for fast algorithms and detailed speed up).
 
+files in "others" folders are not cleaned
+
 ## Relevant repositories:
 * [NonLinPDEs-GPsolver](https://github.com/yifanc96/NonLinPDEs-GPsolver): Python-JAX for solving and learning PDEs using GPs
 * [Time-Dependent-PDEs-GPsolver](https://github.com/yifanc96/Time-Dependent-PDEs-GPsolver): Python-JAX for solving time dependent PDEs
