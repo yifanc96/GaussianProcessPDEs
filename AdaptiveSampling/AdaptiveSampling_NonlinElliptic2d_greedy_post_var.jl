@@ -201,7 +201,7 @@ end
 
 ### parameters
 α = 1.0
-m = 3
+m = 21
 Ω = [[0,1] [0,1]]
 h_in = 0.02
 h_bd = 0.02
@@ -242,7 +242,7 @@ end
 eqn = NonlinElliptic2d(α,m,Ω,fun_bdy,fun_rhs)
 N_domain = 100
 N_boundary = 400
-X_domain, X_boundary = sample_points_rdm(eqn,N_domain, N_boundary)
+global X_domain, X_boundary = sample_points_rdm(eqn,N_domain, N_boundary)
 N_domain = size(X_domain,2)
 N_boundary = size(X_boundary,2)
 
@@ -256,7 +256,7 @@ N_boundary = size(X_boundary,2)
 sol_init = zeros(N_domain) # initial solution
 truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
 
-@time MAP= get_MAP(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, noise_var_bd, GNsteps)
+@time global MAP= get_MAP(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, noise_var_bd, GNsteps)
 
 pts_accuracy = sqrt(sum((truth-MAP).^2)/sum(truth.^2))
 @info "[L2 accuracy of MAP to true sol] $pts_accuracy"
@@ -318,11 +318,11 @@ for i_iter in 1:n_iter
     sample_indx= sample([i for i in 1:refpts_per_iter], Weights(Cov_diag/sum(Cov_diag)), sample_pts_per_iter; replace=true)
     X_add = X_test[:,sample_indx]
 
-    X_domain = hcat(X_domain,X_add)
+    global X_domain = hcat(X_domain,X_add)
     N_domain = size(X_domain,2)
     sol_init = zeros(N_domain) # initial solution
     truth = [fun_u(X_domain[:,i]) for i in 1:N_domain]
-    @time MAP= get_MAP(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, noise_var_bd, GNsteps)
+    @time global MAP= get_MAP(eqn, cov, X_domain, X_boundary, sol_init, noise_var_int, noise_var_bd, GNsteps)
     pts_accuracy = sqrt(sum((truth-MAP).^2)/sum(truth.^2))
     @info "[L2 accuracy of MAP to true sol] $pts_accuracy"
     pts_max_accuracy = maximum(abs.(truth-MAP))/maximum(abs.(truth))
