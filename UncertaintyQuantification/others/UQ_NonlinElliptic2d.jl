@@ -1,4 +1,4 @@
-include("../CovarianceFunctions/CovarianceFunctions.jl")
+include("../../CovarianceFunctions/CovarianceFunctions.jl")
 include("./MCMC.jl")
 
 
@@ -187,24 +187,24 @@ end
 
 
 ### parameters
-α = 1.0
+α = 10.0
 m = 3
 Ω = [[0,1] [0,1]]
 h_in = 0.02
 h_bd = 0.02
 lengthscale = 0.3
-kernel = "Maternh5alf"
-cov = MaternCovariance5_2(lengthscale)
+kernel = "Maternh7alf"
+cov = MaternCovariance7_2(lengthscale)
 noise_var_int = 0.0
 noise_var_bd = 0.0
 GNsteps = 4
 
 function fun_u(x)
-    return sin(pi*x[1])*sin(pi*x[2]) + sin(3*pi*x[1])*sin(3*pi*x[2])
+    return sin(pi*x[1])*sin(pi*x[2]) + sin(10*pi*x[1])*sin(3*pi*x[2])
 end
 
 function fun_rhs(x)
-    ans = 2*pi^2*sin(pi*x[1])*sin(pi*x[2]) + 2*(3*pi)^2*sin(3*pi*x[1])*sin(3*pi*x[2])
+    ans = 2*pi^2*sin(pi*x[1])*sin(pi*x[2]) + ((3*pi)^2+(10*pi)^2)*sin(10*pi*x[1])*sin(3*pi*x[2])
     return ans + α*fun_u(x)^m 
 end
 
@@ -255,8 +255,8 @@ sol_std = [sqrt(abs(sol_postvar[i,i])) for i in 1:N_domain]
 
 ### plot figures
 using PyCall
-fsize = 15.0
-tsize = 15.0
+fsize = 8.0
+tsize = 8.0
 tdir = "in"
 major = 5.0
 minor = 3.0
@@ -278,16 +278,16 @@ rcParams["lines.markersize"] = 10
 
 Nh = convert(Int,sqrt(N_domain))
 
-fig, ax = plt.subplots()
-# UQ_band = figure()
-plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth,Nh,Nh), label = "Reference")
-plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP - sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Lower RKHS bound",alpha=0.6)
-plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP + sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Upper RKHS bound",alpha=0.6)
-fig.tight_layout()
+# fig, ax = plt.subplots()
+# # UQ_band = figure()
+# plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth,Nh,Nh), label = "Reference")
+# # plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP - sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Lower RKHS bound",alpha=0.2)
+# # plot_surface(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(MAP + sqrt(rkhs_norm2)*sol_std,Nh,Nh), color="C1", label = "Upper RKHS bound",alpha=0.2)
+# # fig.tight_layout()
 
-display(gcf())
+# display(gcf())
 
-savefig("UQ_confidence_band_alpha06.pdf")
+# savefig("UQ_confidence_band_alpha06.pdf")
 
 
 
@@ -304,26 +304,39 @@ savefig("UQ_confidence_band_alpha06.pdf")
 # colorbar()
 # display(gcf())
 
+## plot solution 
+# figure()
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(truth,Nh,Nh))
+# colorbar()
+# display(gcf())
+
+## plot error
+# figure()
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(abs.(truth-MAP),Nh,Nh))
+# colorbar()
+# display(gcf())
 
 ## plot figure of var
-figure()
-contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
-colorbar()
-display(gcf())
-savefig("UQ_postvar_contour.pdf")
+# figure()
+# contourf(reshape(X_domain[1,:],Nh,Nh), reshape(X_domain[2,:],Nh,Nh), reshape(sol_std,Nh,Nh))
+# colorbar(format="%.4f")
+# display(gcf())
+# savefig("UQ_postvar_contour_alpha10.pdf", bbox_inches="tight")
+
 
 ## plot one dimensional slice (middle index)
-figure()
+fig = figure(figsize=(4,4))
 idx = Nh÷2
-plot(X_domain[2,1:Nh], reshape(truth,Nh,Nh)[idx,:], label = "truth")
+plot(X_domain[2,1:Nh], reshape(truth,Nh,Nh)[idx,:], label = "Truth")
 plot(X_domain[2,1:Nh], reshape(MAP,Nh,Nh)[idx,:], label = "MAP")
-plot(X_domain[2,1:Nh], reshape(MAP + 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper 3 sigma CI")
-plot(X_domain[2,1:Nh], reshape(MAP - 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower 3 sigma CI")
+# plot(X_domain[2,1:Nh], reshape(MAP + 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper 3 sigma CI")
+# plot(X_domain[2,1:Nh], reshape(MAP - 3.0 * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower 3 sigma CI")
 plot(X_domain[2,1:Nh], reshape(MAP + sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Upper RKHS bound")
 plot(X_domain[2,1:Nh], reshape(MAP - sqrt(rkhs_norm2) * sol_std,Nh,Nh)[idx,:], linestyle="dashed", label = "Lower RKHS bound")
 legend()
 display(gcf())
-
+PyPlot.title("Confidence Band")
+savefig("UQ_postvar_contour_1dslice_confidence_band.pdf",bbox_inches="tight")
 
 
 
