@@ -20,6 +20,8 @@ We use Python (especially JAX, for automation and ease of code writting) and Jul
 
 4. Pau Batlle, Yifan Chen, Bamdad Hosseini, Houman Owhadi, Andrew M. Stuart. "[Error Analysis of Kernel/GP Methods for Nonlinear and Parametric PDEs](https://arxiv.org/abs/2305.04962)", arXiv preprint, 2023.
 
+Some of the analytic results for multiscale PDEs are also related to the following works
+
 5. Yifan Chen, Thomas Y. Hou. "[Multiscale Elliptic PDEs Upscaling and Function Approximation via Subsampled Data](https://arxiv.org/abs/2010.04199)", SIAM Multiscale Modeling and Simulation, 2022.
 
 6. Yifan Chen, Thomas Y. Hou. "[Function Approximation via The Subsampled Poincare Inequality](https://arxiv.org/abs/1912.08173)", Discrete & Continuous Dynamical Systems - A, 2020.
