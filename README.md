@@ -18,10 +18,9 @@ We use Python (especially JAX, for automation and ease of code writting) and Jul
 
 3. Yifan Chen, Houman Owhadi, Florian Schaefer. "[Sparse Cholesky Factorization for Solving Nonlinear PDEs via Gaussian Processes](https://arxiv.org/abs/2304.01294)", Mathematics of Computation, 2024.
 
-4. Pau Batlle, Yifan Chen, Bamdad Hosseini, Houman Owhadi, Andrew M. Stuart. "[Error Analysis of Kernel/GP Methods for Nonlinear and Parametric PDEs](https://arxiv.org/abs/2305.04962)", arXiv preprint, 2023.
+4. Pau Batlle, Yifan Chen, Bamdad Hosseini, Houman Owhadi, Andrew M. Stuart. "[Error Analysis of Kernel/GP Methods for Nonlinear and Parametric PDEs](https://arxiv.org/abs/2305.04962)", Jounal of Computational Physics, 2024.
 
-5. Yifan Chen, Bamdad Hosseini, Houman Owhadi, Andrew M Stuart. "[Gaussian Measures Conditioned on Nonlinear Observations: Consistency, MAP Estimators, and Simulation](https://arxiv.org/abs/2405.13149)", arXiv preprint, 2024. 
-
+5. Yifan Chen, Bamdad Hosseini, Houman Owhadi, Andrew M Stuart. "[Gaussian Measures Conditioned on Nonlinear Observations: Consistency, MAP Estimators, and Simulation](https://arxiv.org/abs/2405.13149)", Statistics and Computing, 2024.
 
 Some of the analytic results for multiscale PDEs (especially the sparse Cholesky fast solver) are also related to the following works
 
