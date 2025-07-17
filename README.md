@@ -73,8 +73,10 @@ We use Python (especially JAX, for automation and ease of code writting) and Jul
   publisher={Springer}
 }
 ```
-Some of the analytic results for multiscale PDEs (especially the sparse Cholesky fast solver) are also related to the following works
+Some of the analytic results for multiscale PDEs (especially the sparse Cholesky fast solver) are also related to the following works (with [corresponding repository](https://github.com/yifanc96/Multiscale-via-Subsampling/tree/master)
 
 5. Yifan Chen, Thomas Y. Hou. "[Multiscale Elliptic PDEs Upscaling and Function Approximation via Subsampled Data](https://arxiv.org/abs/2010.04199)", SIAM Multiscale Modeling and Simulation, 2022.
 
 6. Yifan Chen, Thomas Y. Hou. "[Function Approximation via The Subsampled Poincare Inequality](https://arxiv.org/abs/1912.08173)", Discrete & Continuous Dynamical Systems - A, 2020.
+
+
